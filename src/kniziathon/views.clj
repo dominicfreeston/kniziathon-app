@@ -157,7 +157,7 @@
              "Delete"]]]))]]))
 
 (defn play-form [play games players & [errors]]
-  (let [editing? (some? play)
+  (let [editing? (and play (:id play))
         title (if editing? "Edit Play" "New Play")
         num-players (or (count (:player-results play)) 4)]
     (layout title
@@ -166,6 +166,8 @@
         [:div {:class "error"}
          [:ul (for [err errors] [:li err])]])
       [:form {:method "post" :action (if editing? (str "/plays/" (:id play)) "/plays")}
+        (when editing?
+          [:input {:type "hidden" :name "id" :value (:id play)}])
         [:label {:for "game-id"} "Game"]
         [:select {:name "game-id" :id "game-id" :required true}
          [:option {:value ""} "-- Select Game --"]

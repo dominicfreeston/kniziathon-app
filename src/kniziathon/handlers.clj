@@ -143,14 +143,21 @@
 (defn new-play-form [params]
   (let [num-players (or (parse-int (:num-players params)) 4)
         game-id (:game-id params)
-        play (when game-id {:game-id game-id :player-results (vec (repeat num-players {}))})]
+        ;; Create a proper empty play structure but WITHOUT an id
+        player-results (vec (repeat num-players {}))]
     (response/response
-      (views/play-form play (state/get-all-games) (state/get-all-players)))))
+      (views/play-form {:game-id game-id :player-results player-results} 
+                      (state/get-all-games) 
+                      (state/get-all-players)))))
 
 (defn create-play [params]
   (let [game-id (:game-id params)
         player-results (parse-player-results params)
         errors (validate-play game-id player-results)]
+    (println "Create play params:" params)
+    (println "Game ID:" game-id)
+    (println "Player results:" player-results)
+    (println "Errors:" errors)
     (if (seq errors)
       (response/response
         (views/play-form {:game-id game-id :player-results player-results}
