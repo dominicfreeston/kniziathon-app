@@ -4,7 +4,8 @@
             [kniziathon.views :as views]
             [kniziathon.scoring :as scoring]
             [clojure.string :as str]
-            [clojure.edn :as edn])
+            [clojure.edn :as edn]
+            [hiccup.core :as hiccup])
   (:import [java.util UUID]
            [java.time Instant]))
 
@@ -143,7 +144,6 @@
 (defn new-play-form [params]
   (let [num-players (or (parse-int (:num-players params)) 4)
         game-id (:game-id params)
-        ;; Create a proper empty play structure but WITHOUT an id
         player-results (vec (repeat num-players {}))]
     (response/response
       (views/play-form {:game-id game-id :player-results player-results} 
@@ -214,36 +214,45 @@
       (views/player-detail player (scoring/player-game-details id)))
     (response/not-found "Player not found")))
 
-;; Auto-rank handler
+;; Auto-rank handler - FIXED VERSION
 (defn auto-rank-by-score [params]
   (let [player-results (parse-player-results params)
         ranked (scoring/auto-rank-by-scores player-results)
         num-players (count ranked)]
-    (response/response
-      [:div {:id "player-results"}
-       (for [i (range num-players)]
-         (let [pr (get ranked i)]
-           [:div {:class "player-row"}
-            [:h4 (str "Player " (inc i))]
-            [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
-            
-            [:label {:for (str "player-" i "-id")} "Player"]
-            [:select {:required true :name (str "player-" i "-id")}
-             [:option {:value ""} "-- Select Player --"]
-             (for [p (sort-by :name (state/get-all-players))]
-               [:option {:value (:id p)
-                        :selected (= (:id p) (:player-id pr))}
-                (:name p)])]
-            
-            [:label {:for (str "player-" i "-score")} "Game Score (optional)"]
-            [:input {:type "number" :name (str "player-" i "-score")
-                    :value (:game-score pr)}]
-            
-            [:label {:for (str "player-" i "-rank")} "Rank"]
-            [:input {:type "number" :min 1 :max 6 :required true
-                    :name (str "player-" i "-rank")
-                    :class "small-input"
-                    :value (:rank pr)}]]))])))
+    ;; Generate HTML string from Hiccup
+    (let [html-string 
+          (hiccup/html
+            [:div {:id "player-results"}
+             (for [i (range num-players)]
+               (let [pr (get ranked i)]
+                 [:div {:class "player-row"}
+                  [:h4 (str "Player " (inc i))]
+                  [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
+                  
+                  [:label {:for (str "player-" i "-id")} "Player"]
+                  [:select {:name (str "player-" i "-id") :required true}
+                   [:option {:value ""} "-- Select Player --"]
+                   (for [p (sort-by :name (state/get-all-players))]
+                     [:option {:value (:id p)
+                              :selected (= (:id p) (:player-id pr))}
+                      (:name p)])]
+                  
+                  [:label {:for (str "player-" i "-score")} "Game Score (optional)"]
+                  [:input {:type "number" 
+                          :name (str "player-" i "-score")
+                          :value (:game-score pr)}]
+                  
+                  [:label {:for (str "player-" i "-rank")} "Rank"]
+                  [:input {:type "number" 
+                          :min 1 
+                          :max 6 
+                          :required true
+                          :name (str "player-" i "-rank") 
+                          :class "small-input"
+                          :value (:rank pr)}]]))])]
+      ;; Return HTML string as HTTP response
+      (-> (response/response html-string)
+          (response/content-type "text/html")))))
 
 ;; Data management handlers
 (defn data-management []
