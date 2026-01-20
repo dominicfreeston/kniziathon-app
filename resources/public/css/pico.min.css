@@ -1,0 +1,138 @@
+/* Minimal Pico-inspired CSS for Kniziathon */
+:root {
+  --primary: #1095c1;
+  --secondary: #6c757d;
+  --danger: #d32f2f;
+  --spacing: 1rem;
+  --border-radius: 0.25rem;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  color: #333;
+  background: #f8f9fa;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing);
+}
+
+nav {
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+  padding: var(--spacing) 0;
+  margin-bottom: 2rem;
+}
+
+nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+nav li { margin: 0; }
+
+nav a {
+  text-decoration: none;
+  color: #333;
+  padding: 0.5rem 0;
+}
+
+nav a:hover { color: var(--primary); }
+
+main { padding-bottom: 2rem; }
+
+h1, h2, h3, h4 { margin-top: 1.5rem; margin-bottom: 1rem; }
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button, [role="button"], input[type="submit"] {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-size: 1rem;
+  text-decoration: none;
+  display: inline-block;
+}
+
+button:hover, [role="button"]:hover { background: #0d7ea8; }
+
+button.secondary, [role="button"].secondary {
+  background: var(--secondary);
+}
+
+button.delete-btn { background: var(--danger); }
+button.delete-btn:hover { background: #b71c1c; }
+
+form { max-width: 600px; }
+
+label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="file"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.5rem;
+  margin-bottom: var(--spacing);
+  border: 1px solid #ced4da;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+}
+
+input.small-input { width: auto; max-width: 100px; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  margin: var(--spacing) 0;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+th, td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+tr:last-child td { border-bottom: none; }
+
+fieldset {
+  border: 1px solid #dee2e6;
+  padding: var(--spacing);
+  margin-bottom: var(--spacing);
+  border-radius: var(--border-radius);
+}
+
+legend { padding: 0 0.5rem; font-weight: 600; }
+
+.error { color: var(--danger); }
+.success { color: #28a745; }
