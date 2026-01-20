@@ -190,30 +190,43 @@
          (for [i (range num-players)]
            (let [pr (get (:player-results play) i)]
              [:div {:class "player-row" :key i}
-              [:h4 (str "Player " (inc i))]
-              [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
-              
-              [:label {:for (str "player-" i "-id")} "Player"]
-              [:select {:name (str "player-" i "-id") :required true}
-               [:option {:value ""} "-- Select Player --"]
-               (for [p (sort-by :name players)]
-                 [:option {:value (:id p)
-                          :selected (= (:id p) (:player-id pr))}
-                  (:name p)])]
-              
-              [:label {:for (str "player-" i "-score")} "Game Score (optional)"]
-              [:input {:type "number" 
-                      :name (str "player-" i "-score")
-                      :value (:game-score pr)}]
-              
-              [:label {:for (str "player-" i "-rank")} "Rank"]
-              [:input {:type "number" 
-                      :min 1 
-                      :max 6 
-                      :required true
-                      :name (str "player-" i "-rank") 
-                      :class "small-input"
-                      :value (:rank pr)}]]))]
+              [:div {:style "display: flex; align-items: center; gap: 1rem;"}
+               [:div {:style "display: flex; flex-direction: column;"}
+                (when (> i 0)
+                  [:button {:type "button"
+                           :hx-post "/htmx/plays/move-player"
+                           :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
+                           :hx-target "#player-results"
+                           :hx-swap "outerHTML"
+                           :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"up\"}")
+                           :style "padding: 0.25rem 0.5rem; font-size: 0.8rem;"}
+                   "↑"])
+                (when (< i (dec num-players))
+                  [:button {:type "button"
+                           :hx-post "/htmx/plays/move-player"
+                           :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
+                           :hx-target "#player-results"
+                           :hx-swap "outerHTML"
+                           :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"down\"}")
+                           :style "padding: 0.25rem 0.5rem; font-size: 0.8rem;"}
+                   "↓"])]
+               [:div {:style "flex: 1;"}
+                [:h4 {:style "margin-top: 0;"} (str "Rank " (inc i) " - Player " (inc i))]
+                [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
+                [:input {:type "hidden" :name (str "player-" i "-rank") :value (inc i)}]
+                
+                [:label {:for (str "player-" i "-id")} "Player"]
+                [:select {:name (str "player-" i "-id") :required true}
+                 [:option {:value ""} "-- Select Player --"]
+                 (for [p (sort-by :name players)]
+                   [:option {:value (:id p)
+                            :selected (= (:id p) (:player-id pr))}
+                    (:name p)])]
+                
+                [:label {:for (str "player-" i "-score")} "Game Score (optional)"]
+                [:input {:type "number" 
+                        :name (str "player-" i "-score")
+                        :value (:game-score pr)}]]]]))]
         
         [:button {:type "button"
                  :hx-post "/htmx/plays/rank-by-score"
