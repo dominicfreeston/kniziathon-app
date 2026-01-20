@@ -144,7 +144,21 @@
 (defn new-play-form [params]
   (let [num-players (or (parse-int (:num-players params)) 4)
         game-id (:game-id params)
-        player-results (vec (repeat num-players {}))]
+        ;; Parse existing player data from params
+        existing-results (parse-player-results params)
+        existing-count (count existing-results)
+        ;; Adjust player results based on new count
+        player-results (cond
+                         ;; Increasing players: keep existing, add empty slots
+                         (> num-players existing-count)
+                         (vec (concat existing-results 
+                                     (repeat (- num-players existing-count) {})))
+                         ;; Decreasing players: truncate to new count
+                         (< num-players existing-count)
+                         (vec (take num-players existing-results))
+                         ;; Same count: keep as is
+                         :else
+                         existing-results)]
     (response/response
       (views/play-form {:game-id game-id :player-results player-results} 
                       (state/get-all-games) 
@@ -171,10 +185,32 @@
                          :player-results player-results})
         (response/redirect "/plays")))))
 
-(defn edit-play-form [id]
+(defn edit-play-form [id params]
   (if-let [play (state/get-play id)]
-    (response/response
-      (views/play-form play (state/get-all-games) (state/get-all-players)))
+    (let [;; If params has num-players, we're adjusting the count
+          num-players (parse-int (:num-players params))
+          existing-results (if num-players
+                            (parse-player-results params)
+                            (:player-results play))
+          existing-count (count existing-results)
+          ;; Adjust player results if num-players was provided
+          player-results (if num-players
+                          (cond
+                            ;; Increasing players: keep existing, add empty slots
+                            (> num-players existing-count)
+                            (vec (concat existing-results 
+                                        (repeat (- num-players existing-count) {})))
+                            ;; Decreasing players: truncate to new count
+                            (< num-players existing-count)
+                            (vec (take num-players existing-results))
+                            ;; Same count: keep as is
+                            :else
+                            existing-results)
+                          existing-results)]
+      (response/response
+        (views/play-form (assoc play :player-results player-results)
+                        (state/get-all-games) 
+                        (state/get-all-players))))
     (response/not-found "Play not found")))
 
 (defn update-play [params]

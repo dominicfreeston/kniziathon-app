@@ -179,9 +179,11 @@
         [:label {:for "num-players"} "Number of Players"]
         [:select {:name "num-players" 
                  :id "num-players"
-                 :hx-get "/plays/new"
+                 :hx-get (if editing? 
+                          (str "/plays/" (:id play) "/edit")
+                          "/plays/new")
                  :hx-target "body"
-                 :hx-include "[name='game-id']"}
+                 :hx-include "[name='game-id'],[name^='player-']"}
          (for [n [2 3 4 5 6]]
            [:option {:value n :selected (= n num-players)}
             (str n)])]

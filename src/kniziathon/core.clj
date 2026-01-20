@@ -35,7 +35,7 @@
   (GET "/plays" [] (handlers/plays-list))
   (GET "/plays/new" {params :params} (handlers/new-play-form params))
   (POST "/plays" {params :params} (handlers/create-play params))
-  (GET "/plays/:id/edit" [id] (handlers/edit-play-form id))
+  (GET "/plays/:id/edit" [id :as {params :params}] (handlers/edit-play-form id params))
   (POST "/plays/:id" [id :as {params :params}] (handlers/update-play (assoc params :id id)))
   (POST "/plays/:id/delete" [id] (handlers/delete-play id))
   
