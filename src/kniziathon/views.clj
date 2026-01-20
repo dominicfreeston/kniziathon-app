@@ -55,10 +55,13 @@
          [:td {:class "actions"}
           [:a {:href (str "/games/" (:id game) "/edit")} "Edit"]
           " "
-          [:button {:hx-post (str "/games/" (:id game) "/delete")
-                   :hx-confirm (str "Delete " (:name game) "? This cannot be undone.")
-                   :class "delete-btn"}
-           "Delete"]]])]]))
+          [:form {:method "post" 
+                  :action (str "/games/" (:id game) "/delete")
+                  :style "display: inline;"}
+           [:button {:type "submit"
+                    :class "delete-btn"
+                    :onclick (str "return confirm('Delete " (:name game) "? This cannot be undone.')")}
+            "Delete"]]]])]]))
 
 (defn game-form [game & [errors]]
   (let [editing? (some? game)
@@ -103,10 +106,13 @@
              [:td {:class "actions"}
               [:a {:href (str "/players/" (:id player) "/edit")} "Edit"]
               " "
-              [:button {:hx-post (str "/players/" (:id player) "/delete")
-                       :hx-confirm (str "Delete " (:name player) "? This cannot be undone.")
-                       :class "delete-btn"}
-               "Delete"]]]))]])))
+              [:form {:method "post" 
+                      :action (str "/players/" (:id player) "/delete")
+                      :style "display: inline;"}
+               [:button {:type "submit"
+                        :class "delete-btn"
+                        :onclick (str "return confirm('Delete " (:name player) "? This cannot be undone.')")}
+                "Delete"]]]]))]])))
 
 (defn player-form [player & [errors]]
   (let [editing? (some? player)
@@ -151,10 +157,13 @@
            [:td {:class "actions"}
             [:a {:href (str "/plays/" (:id play) "/edit")} "Edit"]
             " "
-            [:button {:hx-post (str "/plays/" (:id play) "/delete")
-                     :hx-confirm "Delete this play? This cannot be undone."
-                     :class "delete-btn"}
-             "Delete"]]]))]]))
+            [:form {:method "post" 
+                    :action (str "/plays/" (:id play) "/delete")
+                    :style "display: inline;"}
+             [:button {:type "submit"
+                      :class "delete-btn"
+                      :onclick "return confirm('Delete this play? This cannot be undone.')"}
+              "Delete"]]]]))]]))
 
 (defn play-form [play games players & [errors]]
   (let [editing? (and play (:id play))
@@ -325,5 +334,5 @@
     (form/form-to [:post "/data/clear"]
       [:button {:type "submit"
                :class "delete-btn"
-               :hx-confirm "Are you SURE you want to delete ALL data? This cannot be undone!"}
+               :onclick "return confirm('Are you SURE you want to delete ALL data? This cannot be undone!')"}
        "Clear All Data"])))
