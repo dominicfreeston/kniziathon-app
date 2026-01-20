@@ -20,7 +20,7 @@
   (GET "/games/new" [] (handlers/new-game-form))
   (POST "/games" {params :params} (handlers/create-game params))
   (GET "/games/:id/edit" [id] (handlers/edit-game-form id))
-  (POST "/games/:id" {params :params} (handlers/update-game params))
+  (POST "/games/:id" [id :as {params :params}] (handlers/update-game (assoc params :id id)))
   (POST "/games/:id/delete" [id] (handlers/delete-game id))
   
   ;; Players
@@ -28,15 +28,15 @@
   (GET "/players/new" [] (handlers/new-player-form))
   (POST "/players" {params :params} (handlers/create-player params))
   (GET "/players/:id/edit" [id] (handlers/edit-player-form id))
-  (POST "/players/:id" {params :params} (handlers/update-player params))
+  (POST "/players/:id" [id :as {params :params}] (handlers/update-player (assoc params :id id)))
   (POST "/players/:id/delete" [id] (handlers/delete-player id))
   
   ;; Plays
   (GET "/plays" [] (handlers/plays-list))
-  (GET "/plays/new" [] (handlers/new-play-form))
+  (GET "/plays/new" {params :params} (handlers/new-play-form params))
   (POST "/plays" {params :params} (handlers/create-play params))
   (GET "/plays/:id/edit" [id] (handlers/edit-play-form id))
-  (POST "/plays/:id" {params :params} (handlers/update-play params))
+  (POST "/plays/:id" [id :as {params :params}] (handlers/update-play (assoc params :id id)))
   (POST "/plays/:id/delete" [id] (handlers/delete-play id))
   
   ;; Leaderboard

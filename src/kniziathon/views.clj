@@ -159,7 +159,7 @@
 (defn play-form [play games players & [errors]]
   (let [editing? (some? play)
         title (if editing? "Edit Play" "New Play")
-        num-players (or (count (:player-results play)) 2)]
+        num-players (or (count (:player-results play)) 4)]
     (layout title
       [:h1 title]
       (when errors
@@ -175,7 +175,11 @@
             (:name g)])]
         
         [:label {:for "num-players"} "Number of Players"]
-        [:select {:name "num-players" :id "num-players"}
+        [:select {:name "num-players" 
+                 :id "num-players"
+                 :hx-get "/plays/new"
+                 :hx-target "body"
+                 :hx-include "[name='game-id']"}
          (for [n [2 3 4 5 6]]
            [:option {:value n :selected (= n num-players)}
             (str n)])]
@@ -183,7 +187,7 @@
         [:div {:id "player-results"}
          (for [i (range num-players)]
            (let [pr (get (:player-results play) i)]
-             [:div {:class "player-row"}
+             [:div {:class "player-row" :key i}
               [:h4 (str "Player " (inc i))]
               [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
               
@@ -211,7 +215,7 @@
         
         [:button {:type "button"
                  :hx-post "/htmx/plays/rank-by-score"
-                 :hx-include "[name^='player-']"
+                 :hx-include "[name^='player-'],[name='num-players']"
                  :hx-target "#player-results"
                  :hx-swap "outerHTML"}
          "Auto-rank by Score"]

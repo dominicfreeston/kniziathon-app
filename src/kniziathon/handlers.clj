@@ -109,16 +109,15 @@
 
 ;; Plays handlers
 (defn parse-player-results [params]
-  (let [num-players (parse-int (:num-players params))
-        indices (range num-players)]
+  (let [num-players (or (parse-int (:num-players params)) 2)]
     (vec
-      (for [i indices]
+      (for [i (range num-players)]
         (let [player-id (get params (keyword (str "player-" i "-id")))
               game-score (parse-int (get params (keyword (str "player-" i "-score"))))
               rank (parse-int (get params (keyword (str "player-" i "-rank"))))]
-          {:player-id player-id
-           :game-score game-score
-           :rank rank})))))
+          (cond-> {:player-id player-id
+                   :rank rank}
+            game-score (assoc :game-score game-score)))))))
 
 (defn validate-play [game-id player-results]
   (let [player-ids (map :player-id player-results)
@@ -126,21 +125,27 @@
         num-players (count player-results)]
     (cond-> []
       (not game-id) (conj "Game is required")
-      (not (state/get-game game-id)) (conj "Invalid game selected")
+      (str/blank? game-id) (conj "Game is required")
+      (and game-id (not (str/blank? game-id)) (not (state/get-game game-id))) 
+        (conj "Invalid game selected")
       (< num-players 2) (conj "At least 2 players required")
       (some str/blank? player-ids) (conj "All player slots must be filled")
       (not= (count player-ids) (count (set player-ids))) (conj "Duplicate players selected")
       (some nil? ranks) (conj "All ranks must be filled")
-      (not= (set ranks) (set (range 1 (inc num-players)))) 
+      (and (not-any? nil? ranks)
+           (not= (sort ranks) (range 1 (inc num-players)))) 
         (conj (str "Ranks must be consecutive from 1 to " num-players)))))
 
 (defn plays-list []
   (response/response
     (views/plays-list (state/get-all-plays))))
 
-(defn new-play-form []
-  (response/response
-    (views/play-form nil (state/get-all-games) (state/get-all-players))))
+(defn new-play-form [params]
+  (let [num-players (or (parse-int (:num-players params)) 4)
+        game-id (:game-id params)
+        play (when game-id {:game-id game-id :player-results (vec (repeat num-players {}))})]
+    (response/response
+      (views/play-form play (state/get-all-games) (state/get-all-players)))))
 
 (defn create-play [params]
   (let [game-id (:game-id params)
