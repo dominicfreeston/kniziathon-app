@@ -17,6 +17,8 @@
   
   ;; Games
   (GET "/games" [] (handlers/games-list))
+  (GET "/games/merge" [] (handlers/merge-games-form-get))
+  (POST "/games/merge" {params :params} (handlers/merge-games params))
   (GET "/games/new" [] (handlers/new-game-form))
   (POST "/games" {params :params} (handlers/create-game params))
   (GET "/games/:id/edit" [id] (handlers/edit-game-form id))

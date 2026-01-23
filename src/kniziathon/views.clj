@@ -40,7 +40,9 @@
   (layout "Games"
     (when message [:p {:class "success"} message])
     [:h1 "Games"]
-    [:a {:href "/games/new" :role "button"} "Add New Game"]
+    [:div {:style "display: flex; gap: 1rem; margin-bottom: 1rem;"}
+     [:a {:href "/games/new" :role "button"} "Add New Game"]
+     [:a {:href "/games/merge" :role "button" :class "secondary"} "Merge Games"]]
     [:table
      [:thead
       [:tr
@@ -302,6 +304,64 @@
          [:td (:best-score detail)]
          [:td (:rank detail)]
          [:td (:timestamp detail)]])]]))
+
+(defn merge-games-form [games source-game target-game preview-data & [errors]]
+  (layout "Merge Games"
+    [:h1 "Merge Games"]
+    [:p "Combine two duplicate games into one. All plays from the source game will be reassigned to the target game."]
+    
+    (when errors
+      [:div {:class "error"}
+       [:ul (for [err errors] [:li err])]])
+    
+    [:form {:method "post" :action "/games/merge"}
+      [:label {:for "source-game-id"} "Source Game (will be deleted)"]
+      [:select {:name "source-game-id" :id "source-game-id" :required true}
+       [:option {:value ""} "-- Select Game to Remove --"]
+       (for [g (sort-by :name games)]
+         [:option {:value (:id g)
+                  :selected (= (:id g) (:id source-game))}
+          (:name g)])]
+      
+      [:label {:for "target-game-id"} "Target Game (will be kept)"]
+      [:select {:name "target-game-id" :id "target-game-id" :required true}
+       [:option {:value ""} "-- Select Game to Keep --"]
+       (for [g (sort-by :name games)]
+         [:option {:value (:id g)
+                  :selected (= (:id g) (:id target-game))}
+          (:name g)])]
+      
+      (if preview-data
+        [:div
+         [:h2 "Preview Merge"]
+         [:div {:style "background: #f8f9fa; padding: 1rem; border-radius: 4px; margin: 1rem 0;"}
+          [:h3 "Source Game (will be deleted)"]
+          [:p [:strong "Name: "] (:source-name preview-data)]
+          [:p [:strong "Weight: "] (:source-weight preview-data)]
+          [:p [:strong "Plays: "] (:source-plays preview-data)]
+          
+          [:h3 {:style "margin-top: 1.5rem;"} "Target Game (will be kept)"]
+          [:p [:strong "Name: "] (:target-name preview-data)]
+          [:p [:strong "Weight: "] (:target-weight preview-data)]
+          [:p [:strong "Current Plays: "] (:target-plays preview-data)]
+          [:p [:strong "Plays After Merge: "] (+ (:source-plays preview-data) (:target-plays preview-data))]
+          
+          (when (:weight-warning preview-data)
+            [:p {:class "error"} 
+             [:strong "⚠ Warning: "] 
+             "Game weights differ! Source: " (:source-weight preview-data) 
+             ", Target: " (:target-weight preview-data)])]
+         
+         [:input {:type "hidden" :name "confirm" :value "true"}]
+         [:button {:type "submit" :class "delete-btn"} "Confirm Merge"]
+         " "
+         [:a {:href "/games/merge" :role "button" :class "secondary"} "Cancel"]]
+        
+        [:div
+         [:button {:type "submit"} "Preview Merge"]
+         " "
+         [:a {:href "/games" :role "button" :class "secondary"} "Cancel"]])]
+    ))
 
 (defn data-management [& [message]]
   (layout "Data Management"

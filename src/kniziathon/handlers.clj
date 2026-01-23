@@ -70,6 +70,80 @@
   (state/delete-game! id)
   (response/redirect "/games"))
 
+;; Game merge handlers
+(defn merge-games-form-get []
+  (response/response (views/merge-games-form (state/get-all-games) nil nil nil)))
+
+(defn merge-games [params]
+  (let [source-id (:source-game-id params)
+        target-id (:target-game-id params)
+        confirm (:confirm params)
+        games (state/get-all-games)]
+    (println "Merge params:" params)
+    (println "Source:" source-id "Target:" target-id "Confirm:" confirm)
+    
+    (if (= confirm "true")
+      ;; Perform the merge atomically
+      (let [errors (cond-> []
+                     (str/blank? source-id) (conj "Source game is required")
+                     (str/blank? target-id) (conj "Target game is required")
+                     (= source-id target-id) (conj "Cannot merge a game into itself")
+                     (and source-id (not (state/get-game source-id))) (conj "Source game not found")
+                     (and target-id (not (state/get-game target-id))) (conj "Target game not found"))]
+        (if (seq errors)
+          (response/response 
+            (views/merge-games-form games nil nil nil errors))
+          (do
+            ;; Perform atomic merge
+            (swap! state/app-state
+              (fn [current-state]
+                (let [plays (:plays current-state)
+                      ;; Update all plays from source to target
+                      updated-plays (into {}
+                                      (map (fn [[play-id play]]
+                                             [play-id 
+                                              (if (= (:game-id play) source-id)
+                                                (assoc play :game-id target-id)
+                                                play)])
+                                           plays))
+                      ;; Remove source game
+                      updated-games (dissoc (:games current-state) source-id)]
+                  (assoc current-state
+                    :plays updated-plays
+                    :games updated-games))))
+            (response/redirect "/games"))))
+      
+      ;; Show preview (no confirm yet)
+      (if (and source-id target-id)
+        (let [source-game (state/get-game source-id)
+              target-game (state/get-game target-id)
+              all-plays (state/get-all-plays)
+              source-plays (count (filter #(= (:game-id %) source-id) all-plays))
+              target-plays (count (filter #(= (:game-id %) target-id) all-plays))
+              weight-diff (when (and source-game target-game)
+                           (Math/abs (- (:weight source-game) (:weight target-game))))
+              weight-warning (and weight-diff (> weight-diff (* 0.1 (:weight target-game))))
+              errors (cond-> []
+                       (not source-game) (conj "Source game not found")
+                       (not target-game) (conj "Target game not found")
+                       (= source-id target-id) (conj "Cannot merge a game into itself"))]
+          (if (seq errors)
+            (response/response (views/merge-games-form games source-game target-game nil errors))
+            (response/response 
+              (views/merge-games-form 
+                games 
+                source-game 
+                target-game
+                {:source-name (:name source-game)
+                 :source-weight (:weight source-game)
+                 :source-plays source-plays
+                 :target-name (:name target-game)
+                 :target-weight (:weight target-game)
+                 :target-plays target-plays
+                 :weight-warning weight-warning}))))
+        ;; Missing source or target, show form again
+        (response/response (views/merge-games-form games nil nil nil))))))
+
 ;; Players handlers
 (defn players-list []
   (response/response
