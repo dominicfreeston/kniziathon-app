@@ -27,6 +27,8 @@
   
   ;; Players
   (GET "/players" [] (handlers/players-list))
+  (GET "/players/merge" [] (handlers/merge-players-form-get))
+  (POST "/players/merge" {params :params} (handlers/merge-players params))
   (GET "/players/new" [] (handlers/new-player-form))
   (POST "/players" {params :params} (handlers/create-player params))
   (GET "/players/:id/edit" [id] (handlers/edit-player-form id))

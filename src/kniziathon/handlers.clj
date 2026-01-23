@@ -182,6 +182,96 @@
   (state/delete-player! id)
   (response/redirect "/players"))
 
+;; Player merge handlers
+(defn merge-players-form-get []
+  (response/response 
+    (views/merge-players-form (state/get-all-players) 
+                             (scoring/leaderboard-data) 
+                             nil nil nil)))
+
+(defn merge-players [params]
+  (let [source-id (:source-player-id params)
+        target-id (:target-player-id params)
+        confirm (:confirm params)
+        players (state/get-all-players)
+        leaderboard (scoring/leaderboard-data)]
+    (println "Merge players params:" params)
+    (println "Source:" source-id "Target:" target-id "Confirm:" confirm)
+    
+    (if (= confirm "true")
+      ;; Perform the merge atomically
+      (let [errors (cond-> []
+                     (str/blank? source-id) (conj "Source player is required")
+                     (str/blank? target-id) (conj "Target player is required")
+                     (= source-id target-id) (conj "Cannot merge a player into itself")
+                     (and source-id (not (state/get-player source-id))) (conj "Source player not found")
+                     (and target-id (not (state/get-player target-id))) (conj "Target player not found"))]
+        (if (seq errors)
+          (response/response 
+            (views/merge-players-form players leaderboard nil nil nil errors))
+          (do
+            ;; Perform atomic merge
+            (swap! state/app-state
+              (fn [current-state]
+                (let [plays (:plays current-state)
+                      ;; Update all plays: replace source player with target in player-results
+                      updated-plays (into {}
+                                      (map (fn [[play-id play]]
+                                             [play-id 
+                                              (update play :player-results
+                                                (fn [results]
+                                                  (mapv (fn [pr]
+                                                         (if (= (:player-id pr) source-id)
+                                                           (assoc pr :player-id target-id)
+                                                           pr))
+                                                       results)))])
+                                           plays))
+                      ;; Remove source player
+                      updated-players (dissoc (:players current-state) source-id)]
+                  (assoc current-state
+                    :plays updated-plays
+                    :players updated-players))))
+            (response/redirect "/players"))))
+      
+      ;; Show preview (no confirm yet)
+      (if (and source-id target-id)
+        (let [source-player (state/get-player source-id)
+              target-player (state/get-player target-id)
+              all-plays (state/get-all-plays)
+              source-plays (count (filter (fn [play]
+                                           (some #(= (:player-id %) source-id) 
+                                                 (:player-results play)))
+                                         all-plays))
+              target-plays (count (filter (fn [play]
+                                           (some #(= (:player-id %) target-id) 
+                                                 (:player-results play)))
+                                         all-plays))
+              source-stats (first (filter #(= (:player-id %) source-id) leaderboard))
+              target-stats (first (filter #(= (:player-id %) target-id) leaderboard))
+              errors (cond-> []
+                       (not source-player) (conj "Source player not found")
+                       (not target-player) (conj "Target player not found")
+                       (= source-id target-id) (conj "Cannot merge a player into itself"))]
+          (if (seq errors)
+            (response/response (views/merge-players-form players leaderboard source-player target-player nil errors))
+            (response/response 
+              (views/merge-players-form 
+                players 
+                leaderboard
+                source-player 
+                target-player
+                {:source-name (:name source-player)
+                 :source-games (or (:games-played source-stats) 0)
+                 :source-score (or (:total-score source-stats) 0)
+                 :source-plays source-plays
+                 :target-name (:name target-player)
+                 :target-games (or (:games-played target-stats) 0)
+                 :target-score (or (:total-score target-stats) 0)
+                 :target-plays target-plays
+                 :recalc-warning true}))))
+        ;; Missing source or target, show form again
+        (response/response (views/merge-players-form players leaderboard nil nil nil))))))
+
 ;; Plays handlers
 (defn parse-player-results [params]
   (let [num-players (or (parse-int (:num-players params)) 2)]

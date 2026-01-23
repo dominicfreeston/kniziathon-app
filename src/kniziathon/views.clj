@@ -107,7 +107,9 @@
     (layout "Players"
       (when message [:p {:class "success"} message])
       [:h1 "Players"]
-      [:a {:href "/players/new" :role "button"} "Add New Player"]
+      [:div {:style "display: flex; gap: 1rem; margin-bottom: 1rem;"}
+       [:a {:href "/players/new" :role "button"} "Add New Player"]
+       [:a {:href "/players/merge" :role "button" :class "secondary"} "Merge Players"]]
       [:table
        [:thead
         [:tr
@@ -182,7 +184,7 @@
              [:button {:type "submit"
                       :class "delete-btn"
                       :onclick "return confirm('Delete this play? This cannot be undone.')"}
-              "Delete"]]]]))]]))
+              "Delete"]]]]))]])) 
 
 (defn play-form [play games players & [errors]]
   (let [editing? (and play (:id play))
@@ -329,6 +331,65 @@
          [:td (:best-score detail)]
          [:td (:rank detail)]
          [:td (:timestamp detail)]])]]))
+
+(defn merge-players-form [players leaderboard source-player target-player preview-data & [errors]]
+  (let [score-map (into {} (map (fn [p] [(:player-id p) p]) leaderboard))]
+    (layout "Merge Players"
+      [:h1 "Merge Players"]
+      [:p "Combine two duplicate players into one. All plays from the source player will be reassigned to the target player."]
+      
+      (when errors
+        [:div {:class "error"}
+         [:ul (for [err errors] [:li err])]])
+      
+      [:form {:method "post" :action "/players/merge"}
+        [:label {:for "source-player-id"} "Source Player (will be deleted)"]
+        [:select {:name "source-player-id" :id "source-player-id" :required true}
+         [:option {:value ""} "-- Select Player to Remove --"]
+         (for [p (sort-by :name players)]
+           [:option {:value (:id p)
+                    :selected (= (:id p) (:id source-player))}
+            (:name p)])]
+        
+        [:label {:for "target-player-id"} "Target Player (will be kept)"]
+        [:select {:name "target-player-id" :id "target-player-id" :required true}
+         [:option {:value ""} "-- Select Player to Keep --"]
+         (for [p (sort-by :name players)]
+           [:option {:value (:id p)
+                    :selected (= (:id p) (:id target-player))}
+            (:name p)])]
+        
+        (if preview-data
+          [:div
+           [:h2 "Preview Merge"]
+           [:div {:style "background: #f8f9fa; padding: 1rem; border-radius: 4px; margin: 1rem 0;"}
+            [:h3 "Source Player (will be deleted)"]
+            [:p [:strong "Name: "] (:source-name preview-data)]
+            [:p [:strong "Games Played: "] (:source-games preview-data)]
+            [:p [:strong "Total Score: "] (:source-score preview-data)]
+            [:p [:strong "Plays: "] (:source-plays preview-data)]
+            
+            [:h3 {:style "margin-top: 1.5rem;"} "Target Player (will be kept)"]
+            [:p [:strong "Name: "] (:target-name preview-data)]
+            [:p [:strong "Games Played: "] (:target-games preview-data)]
+            [:p [:strong "Total Score: "] (:target-score preview-data)]
+            [:p [:strong "Current Plays: "] (:target-plays preview-data)]
+            [:p [:strong "Plays After Merge: "] (+ (:source-plays preview-data) (:target-plays preview-data))]
+            
+            (when (:recalc-warning preview-data)
+              [:p {:class "error"} 
+               [:strong "⚠ Note: "] 
+               "Scores will be recalculated after merge. The target player's total score may change if they now have better plays for games they've both played."])]
+           
+           [:input {:type "hidden" :name "confirm" :value "true"}]
+           [:button {:type "submit" :class "delete-btn"} "Confirm Merge"]
+           " "
+           [:a {:href "/players/merge" :role "button" :class "secondary"} "Cancel"]]
+          
+          [:div
+           [:button {:type "submit"} "Preview Merge"]
+           " "
+           [:a {:href "/players" :role "button" :class "secondary"} "Cancel"]])])))
 
 (defn merge-games-form [games source-game target-game preview-data & [errors]]
   (layout "Merge Games"
