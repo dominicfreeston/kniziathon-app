@@ -115,6 +115,7 @@
         [:tr
          [:th "Name"]
          [:th "Games Played"]
+         [:th "Total Plays"]
          [:th "Total Score"]
          [:th {:class "actions"} "Actions"]]]
        [:tbody
@@ -123,6 +124,7 @@
             [:tr
              [:td (:name player)]
              [:td (or (:games-played stats) 0)]
+             [:td (or (:total-plays stats) 0)]
              [:td (or (:total-score stats) 0)]
              [:td {:class "actions"}
               [:a {:href (str "/players/" (:id player) "/edit")} "Edit"]
@@ -289,7 +291,8 @@
       [:th {:class "rank-cell"} "Rank"]
       [:th "Player"]
       [:th "Total Score"]
-      [:th "Games Played"]]]
+      [:th "Games Played"]
+      [:th "Total Plays"]]]
     [:tbody
      (map-indexed
        (fn [idx player]
@@ -298,7 +301,8 @@
           [:td [:a {:href (str "/leaderboard/player/" (:player-id player))}
                 (:name player)]]
           [:td (:total-score player)]
-          [:td (:games-played player)]])
+          [:td (:games-played player)]
+          [:td (:total-plays player)]])
        leaderboard-data)]]])
 
 (defn leaderboard [leaderboard-data]
@@ -313,6 +317,7 @@
   (layout (str (:name player) " - Details")
     [:h1 (:name player)]
     [:p [:strong "Total Score: "] (scoring/player-total-score (:id player))]
+    [:p [:strong "Total Plays: "] (scoring/player-total-plays (:id player))]
     [:a {:href "/leaderboard"} "← Back to Leaderboard"]
     [:h2 "Game Breakdown"]
     [:table
@@ -322,7 +327,8 @@
        [:th "Weight"]
        [:th "Best Score"]
        [:th "Rank"]
-       [:th "Date"]]]
+       [:th "Plays"]
+       [:th "Date of Best"]]]
      [:tbody
       (for [detail details]
         [:tr
@@ -330,6 +336,7 @@
          [:td (:weight detail)]
          [:td (:best-score detail)]
          [:td (:rank detail)]
+         [:td (:num-plays detail)]
          [:td (:timestamp detail)]])]]))
 
 (defn merge-players-form [players leaderboard source-player target-player preview-data & [errors]]

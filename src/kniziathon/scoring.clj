@@ -49,6 +49,10 @@
        vals
        (reduce + 0)))
 
+(defn player-total-plays [player-id]
+  "Total number of plays this player has participated in"
+  (count (player-plays player-id)))
+
 (defn player-games-played [player-id]
   "Count of unique games this player has played"
   (count (player-best-scores player-id)))
@@ -60,7 +64,8 @@
               {:player-id (:id player)
                :name (:name player)
                :total-score (player-total-score (:id player))
-               :games-played (player-games-played (:id player))}))
+               :games-played (player-games-played (:id player))
+               :total-plays (player-total-plays (:id player))}))
        (sort-by :total-score >)))
 
 (defn auto-rank-by-scores [player-results]
@@ -79,6 +84,7 @@
          (map (fn [[game-id best-score]]
                 (let [game (state/get-game game-id)
                       game-plays (filter #(= (:game-id %) game-id) plays)
+                      num-plays (count game-plays)
                       best-play (first (sort-by #(play-score-for-player % player-id) > game-plays))
                       player-result (first (filter #(= (:player-id %) player-id)
                                                   (:player-results best-play)))]
@@ -86,5 +92,6 @@
                    :weight (:weight game)
                    :best-score best-score
                    :rank (:rank player-result)
+                   :num-plays num-plays
                    :timestamp (:timestamp best-play)})))
          (sort-by :best-score >))))
