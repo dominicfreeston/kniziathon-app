@@ -384,19 +384,27 @@
                         (str "attachment; filename=\"" filename "\"")))))
 
 (defn import-data [params]
-  (let [file (get params "file")
-        mode (get params "mode")
+  (let [file (:file params)  ; Use keyword access instead of string
+        mode (:mode params)   ; Use keyword access instead of string
         replace? (= mode "replace")]
+    (println "Import params:" params)
+    (println "File:" file)
+    (println "Mode:" mode "Replace?" replace?)
     (if file
       (try
         (let [content (slurp (:tempfile file))
               data (edn/read-string content)]
+          (println "Parsed data:" data)
           (state/import-data! data replace?)
-          (response/redirect "/data"))
+          (-> (response/redirect "/data")
+              (assoc :flash "Data imported successfully")))
         (catch Exception e
+          (println "Error importing:" (.getMessage e))
+          (.printStackTrace e)
           (response/response
             (views/data-management (str "Error importing data: " (.getMessage e))))))
-      (response/redirect "/data"))))
+      (response/response
+        (views/data-management "No file selected")))))
 
 (defn clear-data []
   (state/clear-all-data!)

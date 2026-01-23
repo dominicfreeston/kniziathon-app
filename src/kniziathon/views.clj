@@ -315,19 +315,20 @@
     
     [:h2 "Import Data"]
     [:p "Upload an EDN file to import data."]
-    (form/form-to {:enctype "multipart/form-data"} [:post "/data/import"]
+    [:form {:method "post" :action "/data/import" :enctype "multipart/form-data"}
       [:label {:for "file"} "Select EDN file"]
-      (form/file-upload "file")
+      [:input {:type "file" :name "file" :id "file" :accept ".edn" :required true}]
       
       [:fieldset
+       [:legend "Import Mode"]
        [:label
-        (form/radio-button "mode" false "replace")
+        [:input {:type "radio" :name "mode" :value "replace" :checked true}]
         " Replace all data"]
        [:label
-        (form/radio-button "mode" true "merge")
+        [:input {:type "radio" :name "mode" :value "merge"}]
         " Merge data (keep existing)"]]
       
-      [:button {:type "submit"} "Import Data"])
+      [:button {:type "submit"} "Import Data"]]
     
     [:h2 "Clear All Data"]
     [:p {:style "color: red;"} "WARNING: This will delete all games, players, and plays!"]
