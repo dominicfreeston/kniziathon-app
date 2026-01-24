@@ -405,8 +405,9 @@
     (views/leaderboard (scoring/leaderboard-data))))
 
 (defn leaderboard-fragment []
-  (response/response
-    (views/leaderboard-table (scoring/leaderboard-data))))
+  (-> (hiccup/html (views/leaderboard-table (scoring/leaderboard-data)))
+      (response/response)
+      (response/content-type "text/html")))
 
 (defn player-detail [id]
   (if-let [player (state/get-player id)]
