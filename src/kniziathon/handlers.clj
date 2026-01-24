@@ -4,7 +4,7 @@
             [kniziathon.views :as views]
             [kniziathon.scoring :as scoring]
             [clojure.string :as str]
-            [clojure.edn :as edn]
+            [clojure.data.json :as json]
             [hiccup.core :as hiccup])
   (:import [java.util UUID]
            [java.time Instant]))
@@ -415,7 +415,7 @@
       (views/player-detail player (scoring/player-game-details id)))
     (response/not-found "Player not found")))
 
-;; Auto-rank handler - FIXED VERSION
+;; Auto-rank handler
 (defn auto-rank-by-score [params]
   (let [player-results (parse-player-results params)
         ranked (scoring/auto-rank-by-scores player-results)
@@ -544,15 +544,21 @@
 (defn export-data []
   (let [data @state/app-state
         timestamp (.toString (Instant/now))
-        filename (str "kniziathon-" timestamp ".edn")]
-    (-> (response/response (pr-str data))
-        (response/content-type "application/edn")
+        filename (str "kniziathon-" timestamp ".json")
+        ;; Convert maps to arrays for export
+        export-data {:games (vec (vals (:games data)))
+                     :players (vec (vals (:players data)))
+                     :plays (vec (vals (:plays data)))}
+        ;; Convert to JSON
+        json-str (json/write-str export-data)]
+    (-> (response/response json-str)
+        (response/content-type "application/json")
         (response/header "Content-Disposition" 
                         (str "attachment; filename=\"" filename "\"")))))
 
 (defn import-data [params]
-  (let [file (:file params)  ; Use keyword access instead of string
-        mode (:mode params)   ; Use keyword access instead of string
+  (let [file (:file params)
+        mode (:mode params)
         replace? (= mode "replace")]
     (println "Import params:" params)
     (println "File:" file)
@@ -560,11 +566,17 @@
     (if file
       (try
         (let [content (slurp (:tempfile file))
-              data (edn/read-string content)]
-          (println "Parsed data:" data)
+              ;; Parse JSON - arrays in JSON should become arrays in Clojure
+              raw-data (json/read-str content :key-fn keyword)
+              ;; Convert arrays back to maps keyed by ID
+              data {:games (into {} (map (fn [game] [(:id game) game]) (:games raw-data)))
+                    :players (into {} (map (fn [player] [(:id player) player]) (:players raw-data)))
+                    :plays (into {} (map (fn [play] [(:id play) play]) (:plays raw-data)))}]
+          (println "Parsed data - games:" (count (:games data)) 
+                   "players:" (count (:players data)) 
+                   "plays:" (count (:plays data)))
           (state/import-data! data replace?)
-          (-> (response/redirect "/data")
-              (assoc :flash "Data imported successfully")))
+          (response/redirect "/data"))
         (catch Exception e
           (println "Error importing:" (.getMessage e))
           (.printStackTrace e)

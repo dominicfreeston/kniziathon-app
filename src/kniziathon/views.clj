@@ -462,15 +462,15 @@
     [:h1 "Data Management"]
     
     [:h2 "Export Data"]
-    [:p "Download all data as an EDN file."]
+    [:p "Download all data as a JSON file."]
     (form/form-to [:post "/data/export"]
       [:button {:type "submit"} "Export All Data"])
     
     [:h2 "Import Data"]
-    [:p "Upload an EDN file to import data."]
+    [:p "Upload a JSON file to import data."]
     [:form {:method "post" :action "/data/import" :enctype "multipart/form-data"}
-      [:label {:for "file"} "Select EDN file"]
-      [:input {:type "file" :name "file" :id "file" :accept ".edn" :required true}]
+      [:label {:for "file"} "Select JSON file"]
+      [:input {:type "file" :name "file" :id "file" :accept ".json" :required true}]
       
       [:fieldset
        [:legend "Import Mode"]
