@@ -309,8 +309,24 @@
   (layout "Leaderboard"
     [:h1 "Kniziathon Leaderboard"]
     [:div
-     [:button {:onclick "document.body.classList.toggle('fullscreen-mode')"} 
-      "Toggle Fullscreen"]]
+     [:button {:id "fullscreen-btn" :onclick "enterFullscreen()"} 
+      "Enter Fullscreen"]
+     [:script "
+       function enterFullscreen() {
+         document.documentElement.requestFullscreen();
+       }
+       
+       document.addEventListener('fullscreenchange', function() {
+         var btn = document.getElementById('fullscreen-btn');
+         if (document.fullscreenElement) {
+           btn.style.display = 'none';
+           document.body.classList.add('fullscreen-mode');
+         } else {
+           btn.style.display = 'block';
+           document.body.classList.remove('fullscreen-mode');
+         }
+       });
+     "]]
     (leaderboard-table leaderboard-data)))
 
 (defn player-detail [player details]
