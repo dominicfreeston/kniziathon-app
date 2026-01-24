@@ -15,8 +15,61 @@
      [:style "
        .fullscreen-mode nav { display: none; }
        .fullscreen-mode main { margin-top: 0; }
-       table { width: 100%; }
-       .actions { white-space: nowrap; }
+       table { 
+         width: 100%;
+         border-collapse: collapse;
+       }
+       thead th {
+         background-color: #f1f3f5;
+         padding: 1rem 0.75rem;
+         text-align: left;
+         font-weight: 600;
+         border-bottom: 2px solid #dee2e6;
+       }
+       thead th.numeric {
+         text-align: right;
+       }
+       tbody td {
+         padding: 0.875rem 0.75rem;
+         border-bottom: 1px solid #e9ecef;
+       }
+       tbody tr:nth-child(even) {
+         background-color: #f8f9fa;
+       }
+       td.numeric {
+         text-align: right;
+       }
+       .actions { 
+         white-space: nowrap;
+         text-align: right;
+       }
+       .actions a,
+       .actions button {
+         font-size: 0.9rem;
+         padding: 0.5rem 0.85rem;
+         text-decoration: none;
+         border-radius: 4px;
+         display: inline-block;
+         transition: all 0.15s ease;
+         line-height: 1;
+         vertical-align: middle;
+         box-sizing: border-box;
+         font-family: inherit;
+         cursor: pointer;
+       }
+       .actions a {
+         color: #1971c2;
+         border: 1px solid #1971c2;
+         background-color: transparent;
+       }
+       .actions a:hover {
+         background-color: #1971c2;
+         color: white;
+       }
+       .actions button {
+         margin-left: 0.5rem;
+         border: 1px solid transparent;
+       }
        .player-row { 
          margin-bottom: 0.5rem; 
          padding: 0.75rem; 
@@ -64,16 +117,15 @@
      [:thead
       [:tr
        [:th "Name"]
-       [:th "Weight"]
+       [:th {:class "numeric"} "Weight"]
        [:th {:class "actions"} "Actions"]]]
      [:tbody
       (for [game (sort-by :name games)]
         [:tr
          [:td (:name game)]
-         [:td (:weight game)]
+         [:td {:class "numeric"} (:weight game)]
          [:td {:class "actions"}
           [:a {:href (str "/games/" (:id game) "/edit")} "Edit"]
-          " "
           [:form {:method "post" 
                   :action (str "/games/" (:id game) "/delete")
                   :style "display: inline;"}
@@ -114,21 +166,20 @@
        [:thead
         [:tr
          [:th "Name"]
-         [:th "Games Played"]
-         [:th "Total Plays"]
-         [:th "Total Score"]
+         [:th {:class "numeric"} "Games Played"]
+         [:th {:class "numeric"} "Total Plays"]
+         [:th {:class "numeric"} "Total Score"]
          [:th {:class "actions"} "Actions"]]]
        [:tbody
         (for [player (sort-by :name players)]
           (let [stats (get score-map (:id player))]
             [:tr
              [:td (:name player)]
-             [:td (or (:games-played stats) 0)]
-             [:td (or (:total-plays stats) 0)]
-             [:td (or (:total-score stats) 0)]
+             [:td {:class "numeric"} (or (:games-played stats) 0)]
+             [:td {:class "numeric"} (or (:total-plays stats) 0)]
+             [:td {:class "numeric"} (or (:total-score stats) 0)]
              [:td {:class "actions"}
               [:a {:href (str "/players/" (:id player) "/edit")} "Edit"]
-              " "
               [:form {:method "post" 
                       :action (str "/players/" (:id player) "/delete")
                       :style "display: inline;"}
@@ -288,9 +339,9 @@
      [:tr
       [:th {:class "rank-cell"} "Rank"]
       [:th "Player"]
-      [:th "Total Score"]
-      [:th "Games Played"]
-      [:th "Total Plays"]]]
+      [:th {:class "numeric"} "Total Score"]
+      [:th {:class "numeric"} "Games Played"]
+      [:th {:class "numeric"} "Total Plays"]]]
     [:tbody
      (map-indexed
        (fn [idx player]
@@ -298,9 +349,9 @@
           [:td {:class "rank-cell"} (inc idx)]
           [:td [:a {:href (str "/leaderboard/player/" (:player-id player))}
                 (:name player)]]
-          [:td (:total-score player)]
-          [:td (:games-played player)]
-          [:td (:total-plays player)]])
+          [:td {:class "numeric"} (:total-score player)]
+          [:td {:class "numeric"} (:games-played player)]
+          [:td {:class "numeric"} (:total-plays player)]])
        leaderboard-data)]]])
 
 (defn leaderboard [leaderboard-data]
@@ -338,18 +389,18 @@
      [:thead
       [:tr
        [:th "Game"]
-       [:th "Weight"]
-       [:th "Best Score"]
-       [:th "Rank"]
-       [:th "Plays"]]]
+       [:th {:class "numeric"} "Weight"]
+       [:th {:class "numeric"} "Best Score"]
+       [:th {:class "numeric"} "Rank"]
+       [:th {:class "numeric"} "Plays"]]]
      [:tbody
       (for [detail details]
         [:tr
          [:td (:game-name detail)]
-         [:td (:weight detail)]
-         [:td (:best-score detail)]
-         [:td (:rank detail)]
-         [:td (:num-plays detail)]])]]))
+         [:td {:class "numeric"} (:weight detail)]
+         [:td {:class "numeric"} (:best-score detail)]
+         [:td {:class "numeric"} (:rank detail)]
+         [:td {:class "numeric"} (:num-plays detail)]])]]))
 
 (defn merge-players-form [players leaderboard source-player target-player preview-data & [errors]]
   (let [score-map (into {} (map (fn [p] [(:player-id p) p]) leaderboard))]
