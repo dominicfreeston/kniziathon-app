@@ -162,7 +162,6 @@
      [:thead
       [:tr
        [:th "Game"]
-       [:th "Date/Time"]
        [:th "Players & Results"]
        [:th {:class "actions"} "Actions"]]]
      [:tbody
@@ -170,7 +169,6 @@
         (let [game (state/get-game (:game-id play))]
           [:tr
            [:td (:name game)]
-           [:td (:timestamp play)]
            [:td
             (for [pr (sort-by :rank (:player-results play))]
               (let [player (state/get-player (:player-id pr))]
@@ -343,8 +341,7 @@
        [:th "Weight"]
        [:th "Best Score"]
        [:th "Rank"]
-       [:th "Plays"]
-       [:th "Date of Best"]]]
+       [:th "Plays"]]]
      [:tbody
       (for [detail details]
         [:tr
@@ -352,8 +349,7 @@
          [:td (:weight detail)]
          [:td (:best-score detail)]
          [:td (:rank detail)]
-         [:td (:num-plays detail)]
-         [:td (:timestamp detail)]])]]))
+         [:td (:num-plays detail)]])]]))
 
 (defn merge-players-form [players leaderboard source-player target-player preview-data & [errors]]
   (let [score-map (into {} (map (fn [p] [(:player-id p) p]) leaderboard))]
