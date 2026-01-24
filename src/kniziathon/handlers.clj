@@ -11,11 +11,6 @@
            [java.time Instant]))
 
 ;; Utility functions
-(defn parse-double [s]
-  (when (and s (not (str/blank? s)))
-    (try (Double/parseDouble s)
-         (catch Exception _ nil))))
-
 (defn parse-int [s]
   (when (and s (not (str/blank? s)))
     (try (Integer/parseInt s)
@@ -35,7 +30,7 @@
 
 (defn create-game [params]
   (let [name (:name params)
-        weight (parse-double (:weight params))
+        weight (parse-int (:weight params))
         errors (cond-> []
                  (str/blank? name) (conj "Name is required")
                  (not weight) (conj "Weight must be a valid number")
@@ -56,7 +51,7 @@
 (defn update-game [params]
   (let [id (:id params)
         name (:name params)
-        weight (parse-double (:weight params))
+        weight (parse-int (:weight params))
         errors (cond-> []
                  (str/blank? name) (conj "Name is required")
                  (not weight) (conj "Weight must be a valid number")
@@ -570,9 +565,24 @@
               ;; Parse JSON - arrays in JSON should become arrays in Clojure
               raw-data (json/read-str content :key-fn keyword)
               ;; Convert arrays back to maps keyed by ID
-              data {:games (into {} (map (fn [game] [(:id game) game]) (:games raw-data)))
+              ;; Also ensure weights are integers and scores are integers
+              data {:games (into {} (map (fn [game] 
+                                          [(:id game) 
+                                           (update game :weight 
+                                                  (fn [w] (if (number? w) (int w) w)))]) 
+                                        (:games raw-data)))
                     :players (into {} (map (fn [player] [(:id player) player]) (:players raw-data)))
-                    :plays (into {} (map (fn [play] [(:id play) play]) (:plays raw-data)))}]
+                    :plays (into {} (map (fn [play] 
+                                          [(:id play) 
+                                           (update play :player-results
+                                                  (fn [prs]
+                                                    (mapv (fn [pr]
+                                                           (if (:game-score pr)
+                                                             (update pr :game-score 
+                                                                    (fn [s] (if (number? s) (int s) s)))
+                                                             pr))
+                                                         prs)))])
+                                        (:plays raw-data)))}]
           (println "Parsed data - games:" (count (:games data)) 
                    "players:" (count (:players data)) 
                    "plays:" (count (:plays data)))
@@ -605,7 +615,7 @@
               games (for [row rows
                          :when (seq row)  ; Skip empty rows
                          :let [[name weight-str] row
-                               weight (parse-double weight-str)]
+                               weight (parse-int weight-str)]
                          :when (and (not (str/blank? name)) weight)]
                      {:id (str (UUID/randomUUID))
                       :name (str/trim name)

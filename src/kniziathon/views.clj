@@ -95,7 +95,7 @@
         (form/text-field {:required true} "name" (:name game))
         
         [:label {:for "weight"} "Weight (hours)"]
-        (form/text-field {:required true :type "number" :step "0.1" :min "0.1"}
+        (form/text-field {:required true :type "number" :step "1" :min "1"}
                         "weight" (:weight game))
         
         [:button {:type "submit"} (if editing? "Update Game" "Create Game")]
@@ -486,7 +486,7 @@
     [:h2 "Import Games from CSV"]
     [:p "Upload a CSV file with columns: " [:code "name,weight"]]
     [:p {:style "font-size: 0.9rem; color: #666;"} 
-     "Example: " [:code "Modern Art,1.5"] " (first row should be the header)"]
+     "Example: " [:code "Modern Art,2"] " (first row should be the header)"]
     [:form {:method "post" :action "/data/import-games-csv" :enctype "multipart/form-data"}
       [:label {:for "games-csv-file"} "Select CSV file"]
       [:input {:type "file" :name "file" :id "games-csv-file" :accept ".csv" :required true}]

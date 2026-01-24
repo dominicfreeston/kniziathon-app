@@ -12,7 +12,7 @@
   (get-in position-points-table [num-players rank] 0))
 
 (defn calculate-play-score [rank num-players game-weight]
-  (* (position-points rank num-players) game-weight))
+  (int (* (position-points rank num-players) game-weight)))
 
 (defn player-plays [player-id]
   "Get all plays where this player participated"
