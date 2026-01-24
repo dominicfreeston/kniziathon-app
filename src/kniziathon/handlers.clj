@@ -5,6 +5,7 @@
             [kniziathon.scoring :as scoring]
             [clojure.string :as str]
             [clojure.data.json :as json]
+            [clojure.data.csv :as csv]
             [hiccup.core :as hiccup])
   (:import [java.util UUID]
            [java.time Instant]))
@@ -588,3 +589,67 @@
 (defn clear-data []
   (state/clear-all-data!)
   (response/redirect "/data"))
+
+(defn import-games-csv [params]
+  (let [file (:file params)]
+    (println "Import games CSV params:" params)
+    (println "File:" file)
+    (if file
+      (try
+        (let [content (slurp (:tempfile file))
+              ;; Parse CSV
+              csv-data (csv/read-csv content)
+              ;; First row is header, skip it
+              [header & rows] csv-data
+              ;; Create games from rows
+              games (for [row rows
+                         :when (seq row)  ; Skip empty rows
+                         :let [[name weight-str] row
+                               weight (parse-double weight-str)]
+                         :when (and (not (str/blank? name)) weight)]
+                     {:id (str (UUID/randomUUID))
+                      :name (str/trim name)
+                      :weight weight})
+              ;; Add all games
+              _ (doseq [game games]
+                  (state/add-game! game))]
+          (println "Imported" (count games) "games from CSV")
+          (response/redirect "/data"))
+        (catch Exception e
+          (println "Error importing games CSV:" (.getMessage e))
+          (.printStackTrace e)
+          (response/response
+            (views/data-management (str "Error importing games CSV: " (.getMessage e))))))
+      (response/response
+        (views/data-management "No file selected")))))
+
+(defn import-players-csv [params]
+  (let [file (:file params)]
+    (println "Import players CSV params:" params)
+    (println "File:" file)
+    (if file
+      (try
+        (let [content (slurp (:tempfile file))
+              ;; Parse CSV
+              csv-data (csv/read-csv content)
+              ;; First row is header, skip it
+              [header & rows] csv-data
+              ;; Create players from rows
+              players (for [row rows
+                           :when (seq row)  ; Skip empty rows
+                           :let [[name] row]
+                           :when (not (str/blank? name))]
+                       {:id (str (UUID/randomUUID))
+                        :name (str/trim name)})
+              ;; Add all players
+              _ (doseq [player players]
+                  (state/add-player! player))]
+          (println "Imported" (count players) "players from CSV")
+          (response/redirect "/data"))
+        (catch Exception e
+          (println "Error importing players CSV:" (.getMessage e))
+          (.printStackTrace e)
+          (response/response
+            (views/data-management (str "Error importing players CSV: " (.getMessage e))))))
+      (response/response
+        (views/data-management "No file selected")))))

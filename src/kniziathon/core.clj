@@ -51,6 +51,8 @@
   (GET "/data" [] (handlers/data-management))
   (POST "/data/export" [] (handlers/export-data))
   (POST "/data/import" {params :params} (handlers/import-data params))
+  (POST "/data/import-games-csv" {params :params} (handlers/import-games-csv params))
+  (POST "/data/import-players-csv" {params :params} (handlers/import-players-csv params))
   (POST "/data/clear" [] (handlers/clear-data))
   
   ;; htmx routes

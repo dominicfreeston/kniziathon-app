@@ -467,7 +467,7 @@
       [:button {:type "submit"} "Export All Data"])
     
     [:h2 "Import Data"]
-    [:p "Upload a JSON file to import data."]
+    [:p "Upload a JSON file to import complete data (games, players, and plays)."]
     [:form {:method "post" :action "/data/import" :enctype "multipart/form-data"}
       [:label {:for "file"} "Select JSON file"]
       [:input {:type "file" :name "file" :id "file" :accept ".json" :required true}]
@@ -481,7 +481,25 @@
         [:input {:type "radio" :name "mode" :value "merge"}]
         " Merge data (keep existing)"]]
       
-      [:button {:type "submit"} "Import Data"]]
+      [:button {:type "submit"} "Import JSON Data"]]
+    
+    [:h2 "Import Games from CSV"]
+    [:p "Upload a CSV file with columns: " [:code "name,weight"]]
+    [:p {:style "font-size: 0.9rem; color: #666;"} 
+     "Example: " [:code "Modern Art,1.5"] " (first row should be the header)"]
+    [:form {:method "post" :action "/data/import-games-csv" :enctype "multipart/form-data"}
+      [:label {:for "games-csv-file"} "Select CSV file"]
+      [:input {:type "file" :name "file" :id "games-csv-file" :accept ".csv" :required true}]
+      [:button {:type "submit"} "Import Games from CSV"]]
+    
+    [:h2 "Import Players from CSV"]
+    [:p "Upload a CSV file with column: " [:code "name"]]
+    [:p {:style "font-size: 0.9rem; color: #666;"} 
+     "Example: " [:code "Alice"] " (first row should be the header)"]
+    [:form {:method "post" :action "/data/import-players-csv" :enctype "multipart/form-data"}
+      [:label {:for "players-csv-file"} "Select CSV file"]
+      [:input {:type "file" :name "file" :id "players-csv-file" :accept ".csv" :required true}]
+      [:button {:type "submit"} "Import Players from CSV"]]
     
     [:h2 "Clear All Data"]
     [:p {:style "color: red;"} "WARNING: This will delete all games, players, and plays!"]
