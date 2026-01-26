@@ -75,3 +75,16 @@
   (state/load-state!)
   (println "Starting Kniziathon Tracker on http://localhost:3000")
   (run-jetty app {:port 3000 :join? true}))
+
+(comment
+
+  (def server (atom nil))
+
+  (state/load-state!)
+
+  (.stop @server)
+  
+  (reset! server
+          (run-jetty app {:port 3000
+                          :join? false}))
+  )
