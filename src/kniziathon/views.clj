@@ -123,6 +123,46 @@
         " "
         [:a {:href "/players" :role "button" :class "secondary"} "Cancel"]))))
 
+(defn play-header []
+  [:tr
+   [:th "Game"]
+   [:th "Players"]
+   [:th "Points"]
+   [:th {:class "actions"} "Actions"]])
+
+(defn play-row [play]
+  (let [game (state/get-game (:game-id play))
+        sorted-results (sort-by :rank (:player-results play))]
+    [:tr
+     [:td (format "%s (%d)" (:name game) (:weight game))]
+     [:td
+      (for [pr sorted-results]
+        (let [player (state/get-player (:player-id pr))]
+          [:div
+           (str (:rank pr) ". " (:name player))
+           (when (:game-score pr) (str " (" (:game-score pr) ")"))]))]
+     [:td
+      (for [{:keys [rank]} sorted-results
+            :let [player-count (count (:player-results play))]]
+        [:div
+         (str
+          (scoring/calculate-play-score
+           rank
+           player-count
+           (:weight game))
+          " pts"
+          )])]
+     [:td {:class "actions"}
+      [:a {:href (str "/plays/" (:id play) "/edit")} "Edit"]
+      " "
+      [:form {:method "post" 
+              :action (str "/plays/" (:id play) "/delete")
+              :style "display: inline;"}
+       [:button {:type "submit"
+                 :class "delete-btn"
+                 :onclick "return confirm('Delete this play? This cannot be undone.')"}
+        "Delete"]]]]))
+
 (defn plays-list [plays & [message]]
   (layout "Plays"
     (when message [:p {:class "success"} message])
@@ -130,31 +170,10 @@
     [:a {:href "/plays/new" :role "button"} "Add New Play"]
     [:table
      [:thead
-      [:tr
-       [:th "Game"]
-       [:th "Players & Results"]
-       [:th {:class "actions"} "Actions"]]]
+      (play-header)]
      [:tbody
-      (for [play (take 50 (reverse (sort-by :timestamp plays)))]
-        (let [game (state/get-game (:game-id play))]
-          [:tr
-           [:td (:name game)]
-           [:td
-            (for [pr (sort-by :rank (:player-results play))]
-              (let [player (state/get-player (:player-id pr))]
-                [:div
-                 (str (:rank pr) ". " (:name player))
-                 (when (:game-score pr) (str " (Score: " (:game-score pr) ")"))]))]
-           [:td {:class "actions"}
-            [:a {:href (str "/plays/" (:id play) "/edit")} "Edit"]
-            " "
-            [:form {:method "post" 
-                    :action (str "/plays/" (:id play) "/delete")
-                    :style "display: inline;"}
-             [:button {:type "submit"
-                      :class "delete-btn"
-                      :onclick "return confirm('Delete this play? This cannot be undone.')"}
-              "Delete"]]]]))]])) 
+      (for [play (reverse (sort-by :timestamp plays))]
+        (play-row play))]])) 
 
 (defn play-form [play games players & [errors]]
   (let [editing? (and play (:id play))
