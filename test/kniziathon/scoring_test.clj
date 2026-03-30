@@ -117,9 +117,13 @@
     (state/add-play! {:id "play1" :game-id "g1" :timestamp "2024-01-01"
                       :player-results [{:player-id "p1" :rank 1}
                                        {:player-id "p2" :rank 2}]})
-    (testing "leaderboard is sorted by total score descending"
+    (state/add-player! {:id "p3" :name "Carol"})
+    (testing "leaderboard excludes players with no plays"
       (let [board (scoring/leaderboard-data)]
         (is (= 2 (count board)))
+        (is (not (some #(= "p3" (:player-id %)) board)))))
+    (testing "leaderboard is sorted by total score descending"
+      (let [board (scoring/leaderboard-data)]
         (is (= "p1" (:player-id (first board))))
         (is (= "p2" (:player-id (second board))))))
     (testing "leaderboard entries have expected keys"

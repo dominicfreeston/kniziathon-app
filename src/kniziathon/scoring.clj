@@ -66,6 +66,7 @@
                :total-score (player-total-score (:id player))
                :games-played (player-games-played (:id player))
                :total-plays (player-total-plays (:id player))}))
+       (filter #(pos? (:total-plays %)))
        (sort-by :total-score >)))
 
 (defn auto-rank-by-scores [player-results]
