@@ -8,11 +8,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Run the application (starts server at http://localhost:3000)
 lein run
 
+# Run tests
+lein test
+
+# Run a single test namespace
+lein test kniziathon.scoring-test
+
 # Start a REPL for interactive development
 lein repl
 ```
 
-There are no automated tests — logic can be exercised interactively from the REPL:
+Logic can also be exercised interactively from the REPL:
 
 ```clojure
 (require '[kniziathon.scoring :as scoring])
