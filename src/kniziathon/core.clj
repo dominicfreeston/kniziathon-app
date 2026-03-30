@@ -59,6 +59,8 @@
   (GET "/htmx/leaderboard" [] (handlers/leaderboard-fragment))
   (POST "/htmx/plays/rank-by-score" {params :params} (handlers/auto-rank-by-score params))
   (POST "/htmx/plays/move-player" {params :params} (handlers/move-player params))
+  (POST "/htmx/plays/add-player" {params :params} (handlers/add-player params))
+  (POST "/htmx/plays/remove-player" {params :params} (handlers/remove-player params))
   
   ;; Static resources
   (GET "/css/pico.min.css" [] (response/resource-response "pico.min.css" {:root "public/css"}))

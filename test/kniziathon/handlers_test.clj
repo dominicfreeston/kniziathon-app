@@ -1,5 +1,6 @@
 (ns kniziathon.handlers-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
+            [clojure.string :as str]
             [ring.mock.request :as mock]
             [kniziathon.core :refer [app]]
             [kniziathon.handlers :as handlers]
@@ -144,3 +145,44 @@
   (testing "GET /games/:id/edit with unknown id returns 404"
     (let [resp (app (mock/request :get "/games/nonexistent/edit"))]
       (is (= 404 (:status resp))))))
+
+(deftest htmx-add-player
+  (testing "POST /htmx/plays/add-player appends an empty row"
+    (state/add-player! {:id "p1" :name "Alice"})
+    (let [resp (app (-> (mock/request :post "/htmx/plays/add-player")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "num-players=2&player-0-id=p1&player-0-rank=1&player-1-id=&player-1-rank=2")))]
+      (is (= 200 (:status resp)))
+      (is (clojure.string/includes? (:body resp) "num-players"))
+      ;; fragment should now contain 3 player slots
+      (is (= 3 (count (re-seq #"player-row" (:body resp)))))))
+  (testing "cannot exceed 6 players — add button hidden at max"
+    (let [body (str/join "&"
+                         (concat ["num-players=6"]
+                                 (for [i (range 6)]
+                                   (str "player-" i "-id=p1&player-" i "-rank=" (inc i)))))
+          resp (app (-> (mock/request :post "/htmx/plays/add-player")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body body)))]
+      ;; still returns 200 but no add-player button in the fragment
+      (is (= 200 (:status resp)))
+      (is (not (clojure.string/includes? (:body resp) "add-player"))))))
+
+(deftest htmx-remove-player
+  (testing "POST /htmx/plays/remove-player removes the indicated row"
+    (state/add-player! {:id "p1" :name "Alice"})
+    (state/add-player! {:id "p2" :name "Bob"})
+    (state/add-player! {:id "p3" :name "Carol"})
+    (let [resp (app (-> (mock/request :post "/htmx/plays/remove-player")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "num-players=3&player-0-id=p1&player-0-rank=1&player-1-id=p2&player-1-rank=2&player-2-id=p3&player-2-rank=3&remove-idx=1")))]
+      (is (= 200 (:status resp)))
+      ;; 2 rows remain
+      (is (= 2 (count (re-seq #"player-row" (:body resp)))))))
+  (testing "remove button absent when only 1 player remains"
+    (state/add-player! {:id "p1" :name "Alice"})
+    (let [resp (app (-> (mock/request :post "/htmx/plays/remove-player")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "num-players=2&player-0-id=p1&player-0-rank=1&player-1-id=&player-1-rank=2&remove-idx=1")))]
+      (is (= 200 (:status resp)))
+      (is (not (clojure.string/includes? (:body resp) "remove-player"))))))

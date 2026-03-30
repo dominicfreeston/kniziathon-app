@@ -302,27 +302,10 @@
     (views/plays-list (state/get-all-plays))))
 
 (defn new-play-form [params]
-  (let [num-players (or (parse-int (:num-players params)) 4)
-        game-id (:game-id params)
-        ;; Parse existing player data from params
-        existing-results (parse-player-results params)
-        existing-count (count existing-results)
-        ;; Adjust player results based on new count
-        player-results (cond
-                         ;; Increasing players: keep existing, add empty slots
-                         (> num-players existing-count)
-                         (vec (concat existing-results 
-                                     (repeat (- num-players existing-count) {})))
-                         ;; Decreasing players: truncate to new count
-                         (< num-players existing-count)
-                         (vec (take num-players existing-results))
-                         ;; Same count: keep as is
-                         :else
-                         existing-results)]
-    (response/response
-      (views/play-form {:game-id game-id :player-results player-results} 
-                      (state/get-all-games) 
-                      (state/get-all-players)))))
+  (response/response
+    (views/play-form {:game-id (:game-id params) :player-results [{}]}
+                     (state/get-all-games)
+                     (state/get-all-players))))
 
 (defn create-play [params]
   (let [game-id (:game-id params)
@@ -345,32 +328,12 @@
                          :player-results player-results})
         (response/redirect "/plays")))))
 
-(defn edit-play-form [id params]
+(defn edit-play-form [id _params]
   (if-let [play (state/get-play id)]
-    (let [;; If params has num-players, we're adjusting the count
-          num-players (parse-int (:num-players params))
-          existing-results (if num-players
-                            (parse-player-results params)
-                            (:player-results play))
-          existing-count (count existing-results)
-          ;; Adjust player results if num-players was provided
-          player-results (if num-players
-                          (cond
-                            ;; Increasing players: keep existing, add empty slots
-                            (> num-players existing-count)
-                            (vec (concat existing-results 
-                                        (repeat (- num-players existing-count) {})))
-                            ;; Decreasing players: truncate to new count
-                            (< num-players existing-count)
-                            (vec (take num-players existing-results))
-                            ;; Same count: keep as is
-                            :else
-                            existing-results)
-                          existing-results)]
-      (response/response
-        (views/play-form (assoc play :player-results player-results)
-                        (state/get-all-games) 
-                        (state/get-all-players))))
+    (response/response
+      (views/play-form play
+                       (state/get-all-games)
+                       (state/get-all-players)))
     (response/not-found "Play not found")))
 
 (defn update-play [params]
@@ -411,126 +374,41 @@
       (views/player-detail player (scoring/player-game-details id)))
     (response/not-found "Player not found")))
 
+(defn- htmx-fragment [hiccup-data]
+  (-> (hiccup/html hiccup-data)
+      (response/response)
+      (response/content-type "text/html")))
+
 ;; Auto-rank handler
 (defn auto-rank-by-score [params]
-  (let [player-results (parse-player-results params)
-        ranked (scoring/auto-rank-by-scores player-results)
-        num-players (count ranked)]
-    ;; Generate HTML string from Hiccup
-    (let [html-string 
-          (hiccup/html
-            [:div {:id "player-results"}
-             (for [i (range num-players)]
-               (let [pr (get ranked i)]
-                 [:div {:class "player-row" :style "padding: 0.75rem; margin-bottom: 0.5rem;"}
-                  [:div {:style "display: flex; align-items: center; gap: 1rem;"}
-                   [:div {:style "display: flex; flex-direction: column; align-items: center; min-width: 50px;"}
-                    [:strong {:style "font-size: 1.2rem; margin-bottom: 0.25rem;"} (str "#" (inc i))]
-                    [:div {:style "display: flex; gap: 0.25rem;"}
-                     (when (> i 0)
-                       [:button {:type "button"
-                                :hx-post "/htmx/plays/move-player"
-                                :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                                :hx-target "#player-results"
-                                :hx-swap "outerHTML"
-                                :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"up\"}")
-                                :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-                        "↑"])
-                     (when (< i (dec num-players))
-                       [:button {:type "button"
-                                :hx-post "/htmx/plays/move-player"
-                                :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                                :hx-target "#player-results"
-                                :hx-swap "outerHTML"
-                                :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"down\"}")
-                                :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-                        "↓"])]]
-                   [:div {:style "flex: 2; min-width: 200px;"}
-                    [:label {:for (str "player-" i "-id") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Player"]
-                    [:select {:name (str "player-" i "-id") :required true}
-                     [:option {:value ""} "-- Select --"]
-                     (for [p (sort-by :name (state/get-all-players))]
-                       [:option {:value (:id p)
-                                :selected (= (:id p) (:player-id pr))}
-                        (:name p)])]]
-                   [:div {:style "flex: 1; min-width: 120px;"}
-                    [:label {:for (str "player-" i "-score") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Score"]
-                    [:input {:type "number" 
-                            :name (str "player-" i "-score")
-                            :value (:game-score pr)
-                            :placeholder "Optional"}]]
-                   [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
-                   [:input {:type "hidden" :name (str "player-" i "-rank") :value (inc i)}]]]))])]
-      ;; Return HTML string as HTTP response
-      (-> (response/response html-string)
-          (response/content-type "text/html")))))
+  (let [ranked (scoring/auto-rank-by-scores (parse-player-results params))]
+    (htmx-fragment (views/player-results-fragment ranked (state/get-all-players)))))
 
 ;; Move player handler
 (defn move-player [params]
   (let [player-results (parse-player-results params)
         move-idx (parse-int (:move-idx params))
         direction (:direction params)
-        num-players (count player-results)
-        ;; Swap players based on direction
         swapped (if (= direction "up")
                   (let [temp (get player-results move-idx)
                         other (get player-results (dec move-idx))]
-                    (-> player-results
-                        (assoc move-idx other)
-                        (assoc (dec move-idx) temp)))
+                    (-> player-results (assoc move-idx other) (assoc (dec move-idx) temp)))
                   (let [temp (get player-results move-idx)
                         other (get player-results (inc move-idx))]
-                    (-> player-results
-                        (assoc move-idx other)
-                        (assoc (inc move-idx) temp))))]
-    ;; Generate HTML string from Hiccup
-    (let [html-string 
-          (hiccup/html
-            [:div {:id "player-results"}
-             (for [i (range num-players)]
-               (let [pr (get swapped i)]
-                 [:div {:class "player-row" :style "padding: 0.75rem; margin-bottom: 0.5rem;"}
-                  [:div {:style "display: flex; align-items: center; gap: 1rem;"}
-                   [:div {:style "display: flex; flex-direction: column; align-items: center; min-width: 50px;"}
-                    [:strong {:style "font-size: 1.2rem; margin-bottom: 0.25rem;"} (str "#" (inc i))]
-                    [:div {:style "display: flex; gap: 0.25rem;"}
-                     (when (> i 0)
-                       [:button {:type "button"
-                                :hx-post "/htmx/plays/move-player"
-                                :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                                :hx-target "#player-results"
-                                :hx-swap "outerHTML"
-                                :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"up\"}")
-                                :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-                        "↑"])
-                     (when (< i (dec num-players))
-                       [:button {:type "button"
-                                :hx-post "/htmx/plays/move-player"
-                                :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                                :hx-target "#player-results"
-                                :hx-swap "outerHTML"
-                                :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"down\"}")
-                                :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-                        "↓"])]]
-                   [:div {:style "flex: 2; min-width: 200px;"}
-                    [:label {:for (str "player-" i "-id") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Player"]
-                    [:select {:name (str "player-" i "-id") :required true}
-                     [:option {:value ""} "-- Select --"]
-                     (for [p (sort-by :name (state/get-all-players))]
-                       [:option {:value (:id p)
-                                :selected (= (:id p) (:player-id pr))}
-                        (:name p)])]]
-                   [:div {:style "flex: 1; min-width: 120px;"}
-                    [:label {:for (str "player-" i "-score") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Score"]
-                    [:input {:type "number" 
-                            :name (str "player-" i "-score")
-                            :value (:game-score pr)
-                            :placeholder "Optional"}]]
-                   [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
-                   [:input {:type "hidden" :name (str "player-" i "-rank") :value (inc i)}]]]))])]
-      ;; Return HTML string as HTTP response
-      (-> (response/response html-string)
-          (response/content-type "text/html")))))
+                    (-> player-results (assoc move-idx other) (assoc (inc move-idx) temp))))]
+    (htmx-fragment (views/player-results-fragment swapped (state/get-all-players)))))
+
+;; Add / remove player handlers
+(defn add-player [params]
+  (let [new-results (conj (parse-player-results params) {})]
+    (htmx-fragment (views/player-results-fragment new-results (state/get-all-players)))))
+
+(defn remove-player [params]
+  (let [player-results (parse-player-results params)
+        idx (parse-int (:remove-idx params))
+        new-results (vec (concat (subvec player-results 0 idx)
+                                 (subvec player-results (inc idx))))]
+    (htmx-fragment (views/player-results-fragment new-results (state/get-all-players)))))
 
 ;; Data management handlers
 (defn data-management []
