@@ -359,6 +359,13 @@
   (response/redirect "/plays"))
 
 ;; Leaderboard handlers
+(defn game-detail [id]
+  (if-let [game (state/get-game id)]
+    (let [plays (filter #(= (:game-id %) id) (state/get-all-plays))]
+      (response/response
+        (views/game-detail game plays (state/get-all-players))))
+    (response/not-found "Game not found")))
+
 (defn leaderboard []
   (response/response
     (views/leaderboard (scoring/leaderboard-data))))

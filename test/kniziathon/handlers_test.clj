@@ -191,3 +191,20 @@
                         (mock/body "num-players=2&player-0-id=p1&player-0-rank=1&player-1-id=&player-1-rank=2&remove-idx=1")))]
       (is (= 200 (:status resp)))
       (is (not (clojure.string/includes? (:body resp) "remove-player"))))))
+
+(deftest game-detail-page
+  (testing "GET /games/:id/plays returns 200 and lists plays"
+    (state/add-game! {:id "g1" :name "Chess" :weight 2})
+    (state/add-player! {:id "p1" :name "Alice"})
+    (state/add-player! {:id "p2" :name "Bob"})
+    (state/add-play! {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+                      :player-results [{:player-id "p1" :rank 1}
+                                       {:player-id "p2" :rank 2}]})
+    (let [resp (app (mock/request :get "/games/g1/plays"))]
+      (is (= 200 (:status resp)))
+      (is (str/includes? (:body resp) "Chess"))
+      (is (str/includes? (:body resp) "Alice"))
+      (is (str/includes? (:body resp) "Bob"))))
+  (testing "GET /games/:id/plays with unknown id returns 404"
+    (let [resp (app (mock/request :get "/games/nonexistent/plays"))]
+      (is (= 404 (:status resp))))))

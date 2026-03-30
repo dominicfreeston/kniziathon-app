@@ -42,7 +42,7 @@
      [:tbody
       (for [game (sort-by :name games)]
         [:tr
-         [:td (:name game)]
+         [:td [:a {:href (str "/games/" (:id game) "/plays")} (:name game)]]
          [:td {:class "numeric"} (:weight game)]
          [:td {:class "actions"}
           [:a {:href (str "/games/" (:id game) "/edit")} "Edit"]
@@ -90,7 +90,7 @@
         (for [player (sort-by :name players)]
           (let [stats (get score-map (:id player))]
             [:tr
-             [:td (:name player)]
+             [:td [:a {:href (str "/leaderboard/player/" (:id player))} (:name player)]]
              [:td {:class "numeric"} (or (:games-played stats) 0)]
              [:td {:class "numeric"} (or (:total-plays stats) 0)]
              [:td {:class "numeric"} (or (:total-score stats) 0)]
@@ -128,12 +128,14 @@
   (let [game (state/get-game (:game-id play))
         sorted-results (sort-by :rank (:player-results play))]
     [:tr
-     [:td (format "%s (%d)" (:name game) (:weight game))]
+     [:td [:a {:href (str "/games/" (:game-id play) "/plays")} (:name game)]
+      (str " (" (:weight game) ")")]
      [:td
       (for [pr sorted-results]
         (let [player (state/get-player (:player-id pr))]
           [:div
-           (str (:rank pr) ". " (:name player))
+           (str (:rank pr) ". ")
+           [:a {:href (str "/leaderboard/player/" (:player-id pr))} (:name player)]
            (when (:game-score pr) (str " (" (:game-score pr) ")"))]))]
      [:td
       (for [{:keys [rank]} sorted-results
@@ -333,11 +335,49 @@
      [:tbody
       (for [detail details]
         [:tr
-         [:td (:game-name detail)]
+         [:td [:a {:href (str "/games/" (:game-id detail) "/plays")} (:game-name detail)]]
          [:td {:class "numeric"} (:weight detail)]
          [:td {:class "numeric"} (:best-score detail)]
          [:td {:class "numeric"} (:rank detail)]
          [:td {:class "numeric"} (:num-plays detail)]])]]))
+
+(defn game-detail [game plays players]
+  (layout (str (:name game) " - Plays")
+    [:h1 (:name game)]
+    [:p [:strong "Weight: "] (:weight game)]
+    [:a {:href "/games"} "← Back to Games"]
+    [:h2 "Plays"]
+    (if (empty? plays)
+      [:p "No plays recorded yet."]
+      [:table
+       [:thead
+        [:tr
+         [:th "Date"]
+         [:th "Players"]
+         [:th {:class "actions"} "Actions"]]]
+       [:tbody
+        (for [play (reverse (sort-by :timestamp plays))]
+          (let [sorted-results (sort-by :rank (:player-results play))
+                player-map (into {} (map (fn [p] [(:id p) p]) players))]
+            [:tr
+             [:td (:timestamp play)]
+             [:td
+              (for [pr sorted-results]
+                (let [player (get player-map (:player-id pr))]
+                  [:div
+                   (str (:rank pr) ". ")
+                   [:a {:href (str "/leaderboard/player/" (:player-id pr))} (:name player)]
+                   (when (:game-score pr) (str " (" (:game-score pr) ")"))]))]
+             [:td {:class "actions"}
+              [:a {:href (str "/plays/" (:id play) "/edit")} "Edit"]
+              " "
+              [:form {:method "post"
+                      :action (str "/plays/" (:id play) "/delete")
+                      :style "display: inline;"}
+               [:button {:type "submit"
+                         :class "delete-btn"
+                         :onclick "return confirm('Delete this play? This cannot be undone.')"}
+                "Delete"]]]]))]])))
 
 (defn merge-players-form [players leaderboard source-player target-player preview-data & [errors]]
   (let [score-map (into {} (map (fn [p] [(:player-id p) p]) leaderboard))]

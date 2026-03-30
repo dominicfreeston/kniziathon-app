@@ -20,6 +20,7 @@
   (POST "/games/merge" {params :params} (handlers/merge-games params))
   (GET "/games/new" [] (handlers/new-game-form))
   (POST "/games" {params :params} (handlers/create-game params))
+  (GET "/games/:id/plays" [id] (handlers/game-detail id))
   (GET "/games/:id/edit" [id] (handlers/edit-game-form id))
   (POST "/games/:id" [id :as {params :params}] (handlers/update-game (assoc params :id id)))
   (POST "/games/:id/delete" [id] (handlers/delete-game id))

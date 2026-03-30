@@ -89,7 +89,8 @@
                       best-play (first (sort-by #(play-score-for-player % player-id) > game-plays))
                       player-result (first (filter #(= (:player-id %) player-id)
                                                   (:player-results best-play)))]
-                  {:game-name (:name game)
+                  {:game-id game-id
+                   :game-name (:name game)
                    :weight (:weight game)
                    :best-score best-score
                    :rank (:rank player-result)
