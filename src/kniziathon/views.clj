@@ -12,7 +12,8 @@
      [:title title]
      [:link {:rel "stylesheet" :href "/css/pico.min.css"}]
      [:link {:rel "stylesheet" :href "/css/style.css"}]
-     [:script {:src "/js/htmx.min.js"}]]
+     [:script {:src "/js/htmx.min.js"}]
+     [:script {:src "/js/Sortable.min.js"}]]
     [:body
      [:nav {:class "container"}
       [:ul
@@ -162,29 +163,14 @@
         (play-row play))]]))
 
 (defn- player-entry-row [i pr num-players players]
-  [:div {:class "player-row" :style "padding: 0.75rem; margin-bottom: 0.5rem;"}
+  [:div {:class "player-row"
+         :data-player-id (:player-id pr)
+         :style "padding: 0.75rem; margin-bottom: 0.5rem;"}
    [:div {:style "display: flex; align-items: center; gap: 1rem;"}
-    [:div {:style "display: flex; flex-direction: column; align-items: center; min-width: 50px;"}
-     [:strong {:style "font-size: 1.2rem; margin-bottom: 0.25rem;"} (str "#" (inc i))]
-     [:div {:style "display: flex; gap: 0.25rem;"}
-      (when (> i 0)
-        [:button {:type "button"
-                 :hx-post "/htmx/plays/move-player"
-                 :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                 :hx-target "#player-results"
-                 :hx-swap "outerHTML"
-                 :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"up\"}")
-                 :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-         "↑"])
-      (when (< i (dec num-players))
-        [:button {:type "button"
-                 :hx-post "/htmx/plays/move-player"
-                 :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                 :hx-target "#player-results"
-                 :hx-swap "outerHTML"
-                 :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"down\"}")
-                 :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-         "↓"])]]
+    [:div {:class "drag-handle"
+           :style "cursor: grab; font-size: 1.2rem; color: #aaa; user-select: none; padding: 0 0.25rem;"}
+     "⠿"]
+    [:strong {:style "font-size: 1.1rem; min-width: 2rem;"} (str "#" (inc i))]
     [:div {:style "flex: 2; min-width: 200px;"}
      [:label {:for (str "player-" i "-id") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Player"]
      [:select {:name (str "player-" i "-id") :required true}
@@ -195,9 +181,10 @@
     [:div {:style "flex: 1; min-width: 120px;"}
      [:label {:for (str "player-" i "-score") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Score"]
      [:input {:type "number"
-             :name (str "player-" i "-score")
-             :value (:game-score pr)
-             :placeholder "Optional"}]]
+              :name (str "player-" i "-score")
+              :class "player-score-input"
+              :value (:game-score pr)
+              :placeholder "Optional"}]]
     (when (> num-players 1)
       [:button {:type "button"
                :hx-post "/htmx/plays/remove-player"
@@ -226,7 +213,31 @@
                  :style "margin-top: 0.5rem;"}
         [:option {:value ""} (if (zero? num-players) "-- Select first player --" "-- Add player --")]
         (for [p (sort-by :name players)]
-          [:option {:value (:id p)} (:name p)])])]))
+          [:option {:value (:id p)} (:name p)])])
+     (when (> num-players 1)
+       [:script
+        "(function() {
+           var el = document.getElementById('player-results');
+           Sortable.create(el, {
+             animation: 150,
+             handle: '.drag-handle',
+             filter: 'select,input,button',
+             preventOnFilter: false,
+             onEnd: function() {
+               var rows = el.querySelectorAll('.player-row');
+               var values = {'num-players': rows.length};
+               rows.forEach(function(row, i) {
+                 values['player-' + i + '-id'] = row.querySelector('select').value;
+                 values['player-' + i + '-score'] = row.querySelector('.player-score-input').value;
+               });
+               htmx.ajax('POST', '/htmx/plays/reorder-players', {
+                 target: '#player-results',
+                 swap: 'outerHTML',
+                 values: values
+               });
+             }
+           });
+         })();"])]))
 
 (defn play-form [play games players & [errors]]
   (let [editing? (and play (:id play))

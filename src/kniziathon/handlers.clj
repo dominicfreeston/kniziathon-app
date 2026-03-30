@@ -398,6 +398,10 @@
                     (-> player-results (assoc move-idx other) (assoc (inc move-idx) temp))))]
     (htmx-fragment (views/player-results-fragment swapped (state/get-all-players)))))
 
+;; Reorder players handler
+(defn reorder-players [params]
+  (htmx-fragment (views/player-results-fragment (parse-player-results params) (state/get-all-players))))
+
 ;; Add / remove player handlers
 (defn add-player [params]
   (let [player-results (parse-player-results params)

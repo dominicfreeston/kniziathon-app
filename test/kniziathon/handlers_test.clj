@@ -154,14 +154,14 @@
                         (mock/content-type "application/x-www-form-urlencoded")
                         (mock/body "num-players=1&player-0-id=p1&player-0-rank=1&add-player-id=p2")))]
       (is (= 200 (:status resp)))
-      (is (= 2 (count (re-seq #"player-row" (:body resp)))))))
+      (is (= 2 (count (re-seq #"class=\"player-row\"" (:body resp)))))))
   (testing "blank add-player-id leaves list unchanged"
     (state/add-player! {:id "p1" :name "Alice"})
     (let [resp (app (-> (mock/request :post "/htmx/plays/add-player")
                         (mock/content-type "application/x-www-form-urlencoded")
                         (mock/body "num-players=1&player-0-id=p1&player-0-rank=1&add-player-id=")))]
       (is (= 200 (:status resp)))
-      (is (= 1 (count (re-seq #"player-row" (:body resp)))))))
+      (is (= 1 (count (re-seq #"class=\"player-row\"" (:body resp)))))))
   (testing "add-player dropdown absent at 6 players"
     (let [body (str/join "&"
                          (concat ["num-players=6"]
@@ -183,7 +183,7 @@
                         (mock/body "num-players=3&player-0-id=p1&player-0-rank=1&player-1-id=p2&player-1-rank=2&player-2-id=p3&player-2-rank=3&remove-idx=1")))]
       (is (= 200 (:status resp)))
       ;; 2 rows remain
-      (is (= 2 (count (re-seq #"player-row" (:body resp)))))))
+      (is (= 2 (count (re-seq #"class=\"player-row\"" (:body resp)))))))
   (testing "remove button absent when only 1 player remains"
     (state/add-player! {:id "p1" :name "Alice"})
     (let [resp (app (-> (mock/request :post "/htmx/plays/remove-player")

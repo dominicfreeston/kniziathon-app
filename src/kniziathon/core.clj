@@ -60,6 +60,7 @@
   (POST "/htmx/plays/move-player" {params :params} (handlers/move-player params))
   (POST "/htmx/plays/add-player" {params :params} (handlers/add-player params))
   (POST "/htmx/plays/remove-player" {params :params} (handlers/remove-player params))
+  (POST "/htmx/plays/reorder-players" {params :params} (handlers/reorder-players params))
   
   ;; Static resources
   (GET "/css/pico.min.css" [] (response/resource-response "pico.min.css" {:root "public/css"}))
