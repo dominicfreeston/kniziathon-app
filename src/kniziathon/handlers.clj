@@ -303,7 +303,7 @@
 
 (defn new-play-form [params]
   (response/response
-    (views/play-form {:game-id (:game-id params) :player-results [{}]}
+    (views/play-form {:game-id (:game-id params) :player-results []}
                      (state/get-all-games)
                      (state/get-all-players))))
 
@@ -400,7 +400,11 @@
 
 ;; Add / remove player handlers
 (defn add-player [params]
-  (let [new-results (conj (parse-player-results params) {})]
+  (let [player-results (parse-player-results params)
+        new-player-id (:add-player-id params)
+        new-results (if (str/blank? new-player-id)
+                      player-results
+                      (conj player-results {:player-id new-player-id}))]
     (htmx-fragment (views/player-results-fragment new-results (state/get-all-players)))))
 
 (defn remove-player [params]

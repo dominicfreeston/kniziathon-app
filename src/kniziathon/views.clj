@@ -64,11 +64,9 @@
       (form/form-to [:post (if editing? (str "/games/" (:id game)) "/games")]
         [:label {:for "name"} "Game Name"]
         (form/text-field {:required true} "name" (:name game))
-
         [:label {:for "weight"} "Weight (hours)"]
         (form/text-field {:required true :type "number" :step "1" :min "1"}
                         "weight" (:weight game))
-
         [:button {:type "submit"} (if editing? "Update Game" "Create Game")]
         " "
         [:a {:href "/games" :role "button" :class "secondary"} "Cancel"]))))
@@ -118,7 +116,6 @@
       (form/form-to [:post (if editing? (str "/players/" (:id player)) "/players")]
         [:label {:for "name"} "Player Name"]
         (form/text-field {:required true} "name" (:name player))
-
         [:button {:type "submit"} (if editing? "Update Player" "Create Player")]
         " "
         [:a {:href "/players" :role "button" :class "secondary"} "Cancel"]))))
@@ -145,13 +142,7 @@
       (for [{:keys [rank]} sorted-results
             :let [player-count (count (:player-results play))]]
         [:div
-         (str
-          (scoring/calculate-play-score
-           rank
-           player-count
-           (:weight game))
-          " pts"
-          )])]
+         (str (scoring/calculate-play-score rank player-count (:weight game)) " pts")])]
      [:td {:class "actions"}
       [:a {:href (str "/plays/" (:id play) "/edit")} "Edit"]
       " "
@@ -169,79 +160,82 @@
     [:h1 "Plays"]
     [:a {:href "/plays/new" :role "button"} "Add New Play"]
     [:table
-     [:thead
-      (play-header)]
+     [:thead (play-header)]
      [:tbody
       (for [play (reverse (sort-by :timestamp plays))]
         (play-row play))]]))
+
+(defn- player-entry-row [i pr num-players players]
+  [:div {:class "player-row" :style "padding: 0.75rem; margin-bottom: 0.5rem;"}
+   [:div {:style "display: flex; align-items: center; gap: 1rem;"}
+    [:div {:style "display: flex; flex-direction: column; align-items: center; min-width: 50px;"}
+     [:strong {:style "font-size: 1.2rem; margin-bottom: 0.25rem;"} (str "#" (inc i))]
+     [:div {:style "display: flex; gap: 0.25rem;"}
+      (when (> i 0)
+        [:button {:type "button"
+                 :hx-post "/htmx/plays/move-player"
+                 :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
+                 :hx-target "#player-results"
+                 :hx-swap "outerHTML"
+                 :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"up\"}")
+                 :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
+         "↑"])
+      (when (< i (dec num-players))
+        [:button {:type "button"
+                 :hx-post "/htmx/plays/move-player"
+                 :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
+                 :hx-target "#player-results"
+                 :hx-swap "outerHTML"
+                 :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"down\"}")
+                 :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
+         "↓"])]]
+    [:div {:style "flex: 2; min-width: 200px;"}
+     [:label {:for (str "player-" i "-id") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Player"]
+     [:select {:name (str "player-" i "-id") :required true}
+      [:option {:value ""} "-- Select --"]
+      (for [p (sort-by :name players)]
+        [:option {:value (:id p) :selected (= (:id p) (:player-id pr))}
+         (:name p)])]]
+    [:div {:style "flex: 1; min-width: 120px;"}
+     [:label {:for (str "player-" i "-score") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Score"]
+     [:input {:type "number"
+             :name (str "player-" i "-score")
+             :value (:game-score pr)
+             :placeholder "Optional"}]]
+    (when (> num-players 1)
+      [:button {:type "button"
+               :hx-post "/htmx/plays/remove-player"
+               :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
+               :hx-target "#player-results"
+               :hx-swap "outerHTML"
+               :hx-vals (str "{\"remove-idx\": " i "}")
+               :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
+       "Remove"])
+    [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
+    [:input {:type "hidden" :name (str "player-" i "-rank") :value (inc i)}]]])
 
 (defn player-results-fragment [player-results players]
   (let [num-players (count player-results)]
     [:div {:id "player-results"}
      [:input {:type "hidden" :name "num-players" :value num-players}]
      (for [i (range num-players)]
-       (let [pr (get player-results i)]
-         [:div {:class "player-row" :style "padding: 0.75rem; margin-bottom: 0.5rem;"}
-          [:div {:style "display: flex; align-items: center; gap: 1rem;"}
-           [:div {:style "display: flex; flex-direction: column; align-items: center; min-width: 50px;"}
-            [:strong {:style "font-size: 1.2rem; margin-bottom: 0.25rem;"} (str "#" (inc i))]
-            [:div {:style "display: flex; gap: 0.25rem;"}
-             (when (> i 0)
-               [:button {:type "button"
-                        :hx-post "/htmx/plays/move-player"
-                        :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                        :hx-target "#player-results"
-                        :hx-swap "outerHTML"
-                        :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"up\"}")
-                        :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-                "↑"])
-             (when (< i (dec num-players))
-               [:button {:type "button"
-                        :hx-post "/htmx/plays/move-player"
-                        :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                        :hx-target "#player-results"
-                        :hx-swap "outerHTML"
-                        :hx-vals (str "{\"move-idx\": " i ", \"direction\": \"down\"}")
-                        :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-                "↓"])]]
-           [:div {:style "flex: 2; min-width: 200px;"}
-            [:label {:for (str "player-" i "-id") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Player"]
-            [:select {:name (str "player-" i "-id") :required true}
-             [:option {:value ""} "-- Select --"]
-             (for [p (sort-by :name players)]
-               [:option {:value (:id p)
-                        :selected (= (:id p) (:player-id pr))}
-                (:name p)])]]
-           [:div {:style "flex: 1; min-width: 120px;"}
-            [:label {:for (str "player-" i "-score") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Score"]
-            [:input {:type "number"
-                    :name (str "player-" i "-score")
-                    :value (:game-score pr)
-                    :placeholder "Optional"}]]
-           (when (> num-players 1)
-             [:button {:type "button"
-                      :hx-post "/htmx/plays/remove-player"
-                      :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                      :hx-target "#player-results"
-                      :hx-swap "outerHTML"
-                      :hx-vals (str "{\"remove-idx\": " i "}")
-                      :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-              "Remove"])
-           [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
-           [:input {:type "hidden" :name (str "player-" i "-rank") :value (inc i)}]]]))
+       (player-entry-row i (get player-results i) num-players players))
      (when (< num-players 6)
-       [:button {:type "button"
-                :hx-post "/htmx/plays/add-player"
-                :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-                :hx-target "#player-results"
-                :hx-swap "outerHTML"
-                :style "margin-top: 0.5rem;"}
-        "+ Add Player"])]))
+       [:select {:name "add-player-id"
+                 :hx-post "/htmx/plays/add-player"
+                 :hx-trigger "change"
+                 :hx-include "[name^='player-'],[name='num-players']"
+                 :hx-target "#player-results"
+                 :hx-swap "outerHTML"
+                 :style "margin-top: 0.5rem;"}
+        [:option {:value ""} (if (zero? num-players) "-- Select first player --" "-- Add player --")]
+        (for [p (sort-by :name players)]
+          [:option {:value (:id p)} (:name p)])])]))
 
 (defn play-form [play games players & [errors]]
   (let [editing? (and play (:id play))
         title (if editing? "Edit Play" "New Play")
-        player-results (vec (or (seq (:player-results play)) [{}]))]
+        player-results (vec (or (:player-results play) []))]
     (layout title
       [:h1 title]
       (when errors
@@ -254,8 +248,7 @@
         [:select {:name "game-id" :id "game-id" :required true}
          [:option {:value ""} "-- Select Game --"]
          (for [g (sort-by :name games)]
-           [:option {:value (:id g)
-                    :selected (= (:id g) (:game-id play))}
+           [:option {:value (:id g) :selected (= (:id g) (:game-id play))}
             (:name g)])]
         (player-results-fragment player-results players)
         [:button {:type "button"
@@ -346,28 +339,22 @@
     (layout "Merge Players"
       [:h1 "Merge Players"]
       [:p "Combine two duplicate players into one. All plays from the source player will be reassigned to the target player."]
-
       (when errors
         [:div {:class "error"}
          [:ul (for [err errors] [:li err])]])
-
       [:form {:method "post" :action "/players/merge"}
         [:label {:for "source-player-id"} "Source Player (will be deleted)"]
         [:select {:name "source-player-id" :id "source-player-id" :required true}
          [:option {:value ""} "-- Select Player to Remove --"]
          (for [p (sort-by :name players)]
-           [:option {:value (:id p)
-                    :selected (= (:id p) (:id source-player))}
+           [:option {:value (:id p) :selected (= (:id p) (:id source-player))}
             (:name p)])]
-
         [:label {:for "target-player-id"} "Target Player (will be kept)"]
         [:select {:name "target-player-id" :id "target-player-id" :required true}
          [:option {:value ""} "-- Select Player to Keep --"]
          (for [p (sort-by :name players)]
-           [:option {:value (:id p)
-                    :selected (= (:id p) (:id target-player))}
+           [:option {:value (:id p) :selected (= (:id p) (:id target-player))}
             (:name p)])]
-
         (if preview-data
           [:div
            [:h2 "Preview Merge"]
@@ -377,24 +364,20 @@
             [:p [:strong "Games Played: "] (:source-games preview-data)]
             [:p [:strong "Total Score: "] (:source-score preview-data)]
             [:p [:strong "Plays: "] (:source-plays preview-data)]
-
             [:h3 {:style "margin-top: 1.5rem;"} "Target Player (will be kept)"]
             [:p [:strong "Name: "] (:target-name preview-data)]
             [:p [:strong "Games Played: "] (:target-games preview-data)]
             [:p [:strong "Total Score: "] (:target-score preview-data)]
             [:p [:strong "Current Plays: "] (:target-plays preview-data)]
             [:p [:strong "Plays After Merge: "] (+ (:source-plays preview-data) (:target-plays preview-data))]
-
             (when (:recalc-warning preview-data)
               [:p {:class "error"}
                [:strong "⚠ Note: "]
                "Scores will be recalculated after merge. The target player's total score may change if they now have better plays for games they've both played."])]
-
            [:input {:type "hidden" :name "confirm" :value "true"}]
            [:button {:type "submit" :class "delete-btn"} "Confirm Merge"]
            " "
            [:a {:href "/players/merge" :role "button" :class "secondary"} "Cancel"]]
-
           [:div
            [:button {:type "submit"} "Preview Merge"]
            " "
@@ -404,28 +387,22 @@
   (layout "Merge Games"
     [:h1 "Merge Games"]
     [:p "Combine two duplicate games into one. All plays from the source game will be reassigned to the target game."]
-
     (when errors
       [:div {:class "error"}
        [:ul (for [err errors] [:li err])]])
-
     [:form {:method "post" :action "/games/merge"}
       [:label {:for "source-game-id"} "Source Game (will be deleted)"]
       [:select {:name "source-game-id" :id "source-game-id" :required true}
        [:option {:value ""} "-- Select Game to Remove --"]
        (for [g (sort-by :name games)]
-         [:option {:value (:id g)
-                  :selected (= (:id g) (:id source-game))}
+         [:option {:value (:id g) :selected (= (:id g) (:id source-game))}
           (:name g)])]
-
       [:label {:for "target-game-id"} "Target Game (will be kept)"]
       [:select {:name "target-game-id" :id "target-game-id" :required true}
        [:option {:value ""} "-- Select Game to Keep --"]
        (for [g (sort-by :name games)]
-         [:option {:value (:id g)
-                  :selected (= (:id g) (:id target-game))}
+         [:option {:value (:id g) :selected (= (:id g) (:id target-game))}
           (:name g)])]
-
       (if preview-data
         [:div
          [:h2 "Preview Merge"]
@@ -434,24 +411,20 @@
           [:p [:strong "Name: "] (:source-name preview-data)]
           [:p [:strong "Weight: "] (:source-weight preview-data)]
           [:p [:strong "Plays: "] (:source-plays preview-data)]
-
           [:h3 {:style "margin-top: 1.5rem;"} "Target Game (will be kept)"]
           [:p [:strong "Name: "] (:target-name preview-data)]
           [:p [:strong "Weight: "] (:target-weight preview-data)]
           [:p [:strong "Current Plays: "] (:target-plays preview-data)]
           [:p [:strong "Plays After Merge: "] (+ (:source-plays preview-data) (:target-plays preview-data))]
-
           (when (:weight-warning preview-data)
             [:p {:class "error"}
              [:strong "⚠ Warning: "]
              "Game weights differ! Source: " (:source-weight preview-data)
              ", Target: " (:target-weight preview-data)])]
-
          [:input {:type "hidden" :name "confirm" :value "true"}]
          [:button {:type "submit" :class "delete-btn"} "Confirm Merge"]
          " "
          [:a {:href "/games/merge" :role "button" :class "secondary"} "Cancel"]]
-
         [:div
          [:button {:type "submit"} "Preview Merge"]
          " "
@@ -461,18 +434,15 @@
   (layout "Data Management"
     (when message [:p {:class "success"} message])
     [:h1 "Data Management"]
-
     [:h2 "Export Data"]
     [:p "Download all data as a JSON file."]
     (form/form-to [:post "/data/export"]
       [:button {:type "submit"} "Export All Data"])
-
     [:h2 "Import Data"]
     [:p "Upload a JSON file to import complete data (games, players, and plays)."]
     [:form {:method "post" :action "/data/import" :enctype "multipart/form-data"}
       [:label {:for "file"} "Select JSON file"]
       [:input {:type "file" :name "file" :id "file" :accept ".json" :required true}]
-
       [:fieldset
        [:legend "Import Mode"]
        [:label
@@ -481,9 +451,7 @@
        [:label
         [:input {:type "radio" :name "mode" :value "merge"}]
         " Merge data (keep existing)"]]
-
       [:button {:type "submit"} "Import JSON Data"]]
-
     [:h2 "Import Games from CSV"]
     [:p "Upload a CSV file with columns: " [:code "name,weight"]]
     [:p {:style "font-size: 0.9rem; color: #666;"}
@@ -492,7 +460,6 @@
       [:label {:for "games-csv-file"} "Select CSV file"]
       [:input {:type "file" :name "file" :id "games-csv-file" :accept ".csv" :required true}]
       [:button {:type "submit"} "Import Games from CSV"]]
-
     [:h2 "Import Players from CSV"]
     [:p "Upload a CSV file with column: " [:code "name"]]
     [:p {:style "font-size: 0.9rem; color: #666;"}
@@ -501,7 +468,6 @@
       [:label {:for "players-csv-file"} "Select CSV file"]
       [:input {:type "file" :name "file" :id "players-csv-file" :accept ".csv" :required true}]
       [:button {:type "submit"} "Import Players from CSV"]]
-
     [:h2 "Clear All Data"]
     [:p {:style "color: red;"} "WARNING: This will delete all games, players, and plays!"]
     (form/form-to [:post "/data/clear"]

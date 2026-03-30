@@ -147,16 +147,22 @@
       (is (= 404 (:status resp))))))
 
 (deftest htmx-add-player
-  (testing "POST /htmx/plays/add-player appends an empty row"
+  (testing "selecting a player appends them to the list"
+    (state/add-player! {:id "p1" :name "Alice"})
+    (state/add-player! {:id "p2" :name "Bob"})
+    (let [resp (app (-> (mock/request :post "/htmx/plays/add-player")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "num-players=1&player-0-id=p1&player-0-rank=1&add-player-id=p2")))]
+      (is (= 200 (:status resp)))
+      (is (= 2 (count (re-seq #"player-row" (:body resp)))))))
+  (testing "blank add-player-id leaves list unchanged"
     (state/add-player! {:id "p1" :name "Alice"})
     (let [resp (app (-> (mock/request :post "/htmx/plays/add-player")
                         (mock/content-type "application/x-www-form-urlencoded")
-                        (mock/body "num-players=2&player-0-id=p1&player-0-rank=1&player-1-id=&player-1-rank=2")))]
+                        (mock/body "num-players=1&player-0-id=p1&player-0-rank=1&add-player-id=")))]
       (is (= 200 (:status resp)))
-      (is (clojure.string/includes? (:body resp) "num-players"))
-      ;; fragment should now contain 3 player slots
-      (is (= 3 (count (re-seq #"player-row" (:body resp)))))))
-  (testing "cannot exceed 6 players — add button hidden at max"
+      (is (= 1 (count (re-seq #"player-row" (:body resp)))))))
+  (testing "add-player dropdown absent at 6 players"
     (let [body (str/join "&"
                          (concat ["num-players=6"]
                                  (for [i (range 6)]
@@ -164,9 +170,8 @@
           resp (app (-> (mock/request :post "/htmx/plays/add-player")
                         (mock/content-type "application/x-www-form-urlencoded")
                         (mock/body body)))]
-      ;; still returns 200 but no add-player button in the fragment
       (is (= 200 (:status resp)))
-      (is (not (clojure.string/includes? (:body resp) "add-player"))))))
+      (is (not (str/includes? (:body resp) "add-player-id"))))))
 
 (deftest htmx-remove-player
   (testing "POST /htmx/plays/remove-player removes the indicated row"
