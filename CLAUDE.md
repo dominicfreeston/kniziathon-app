@@ -18,6 +18,22 @@ lein test kniziathon.scoring-test
 lein repl
 ```
 
+**Development with hot-reload** — use the REPL instead of `lein run`:
+
+```bash
+lein repl
+```
+
+`dev/user.clj` is loaded automatically, giving you these helpers:
+
+```clojure
+(start!)    ; load state and start server on port 3000 with wrap-reload
+(stop!)     ; stop the server
+(restart!)  ; stop then start
+```
+
+With `wrap-reload`, each HTTP request reloads any namespaces whose source files have changed — no restart needed when editing `views.clj`, `handlers.clj`, etc.
+
 Logic can also be exercised interactively from the REPL:
 
 ```clojure

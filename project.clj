@@ -9,4 +9,7 @@
                  [org.clojure/data.csv "1.0.1"]]
   :main kniziathon.core
   :aot [kniziathon.core]
-  :profiles {:dev {:dependencies [[ring/ring-mock "0.4.0"]]}})
+  :profiles {:dev {:source-paths ["dev"]
+                   :repl-options {:init-ns user}
+                   :dependencies [[ring/ring-mock "0.4.0"]
+                                  [ring/ring-devel "1.10.0"]]}})

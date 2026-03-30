@@ -2,7 +2,7 @@
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]))
 
-(def app-state
+(defonce app-state
   (atom {:games {}
          :players {}
          :plays {}}))

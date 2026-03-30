@@ -7,8 +7,7 @@
             [compojure.route :as route]
             [ring.util.response :as response]
             [kniziathon.state :as state]
-            [kniziathon.handlers :as handlers]
-            [kniziathon.views :as views])
+            [kniziathon.handlers :as handlers])
   (:gen-class))
 
 (defroutes app-routes
@@ -80,13 +79,16 @@
 
 (comment
 
-  (def server (atom nil))
+  (do 
+    (require '[ring.middleware.reload :refer [wrap-reload]])
+    (def dev-app (wrap-reload #'app))
+    (def server (atom nil)))
 
   (state/load-state!)
 
   (.stop @server)
   
   (reset! server
-          (run-jetty app {:port 3000
-                          :join? false}))
+          (run-jetty dev-app {:port 3000
+                              :join? false}))
   )
