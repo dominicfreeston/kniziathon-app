@@ -14,33 +14,20 @@ lein test
 # Run a single test namespace
 lein test kniziathon.scoring-test
 
-# Start a REPL for interactive development
-lein repl
+# Attempt to auto-fix unbalanced parenthesis
+parmezan --file path/to/file.clj --write
 ```
 
-**Development with hot-reload** — use the REPL instead of `lein run`:
+## Testing
 
-```bash
-lein repl
-```
+Always run `lein test` after making changes. New functionality must be accompanied by tests.
 
-`dev/user.clj` is loaded automatically, giving you these helpers:
+Test namespaces mirror source namespaces:
+- `kniziathon.scoring-test` — pure scoring logic
+- `kniziathon.state-test` — CRUD and persistence
+- `kniziathon.handlers-test` — HTTP endpoints via `ring.mock.request`
 
-```clojure
-(start!)    ; load state and start server on port 3000 with wrap-reload
-(stop!)     ; stop the server
-(restart!)  ; stop then start
-```
-
-With `wrap-reload`, each HTTP request reloads any namespaces whose source files have changed — no restart needed when editing `views.clj`, `handlers.clj`, etc.
-
-Logic can also be exercised interactively from the REPL:
-
-```clojure
-(require '[kniziathon.scoring :as scoring])
-(scoring/position-points 1 4)          ; => 6
-(scoring/calculate-play-score 1 4 1.5) ; => 9
-```
+Each test namespace uses a `:each` fixture to reset `app-state` between tests.
 
 ## Architecture
 
