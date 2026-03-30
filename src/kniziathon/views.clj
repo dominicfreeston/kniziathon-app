@@ -12,7 +12,7 @@
      [:title title]
      [:link {:rel "stylesheet" :href "/css/pico.min.css"}]
      [:link {:rel "stylesheet" :href "/css/style.css"}]
-     [:script {:src "https://unpkg.com/htmx.org@1.9.10"}]]
+     [:script {:src "/js/htmx.min.js"}]]
     [:body
      [:nav {:class "container"}
       [:ul
