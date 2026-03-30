@@ -16,7 +16,7 @@
     [:body
      [:nav {:class "container"}
       [:ul
-       [:li [:strong [:a {:href "/"} "Kniziathon Tracker"]]]
+       [:li [:strong [:a {:href "/"} "Kniziathon"]]]
        [:li [:a {:href "/games"} "Games"]]
        [:li [:a {:href "/players"} "Players"]]
        [:li [:a {:href "/plays"} "Plays"]]
@@ -67,9 +67,7 @@
         [:label {:for "weight"} "Weight (hours)"]
         (form/text-field {:required true :type "number" :step "1" :min "1"}
                         "weight" (:weight game))
-        [:button {:type "submit"} (if editing? "Update Game" "Create Game")]
-        " "
-        [:a {:href "/games" :role "button" :class "secondary"} "Cancel"]))))
+        [:button {:type "submit"} (if editing? "Update Game" "Create Game")]))))
 
 (defn players-list [players leaderboard & [message]]
   (let [score-map (into {} (map (fn [p] [(:player-id p) p]) leaderboard))]
@@ -116,9 +114,7 @@
       (form/form-to [:post (if editing? (str "/players/" (:id player)) "/players")]
         [:label {:for "name"} "Player Name"]
         (form/text-field {:required true} "name" (:name player))
-        [:button {:type "submit"} (if editing? "Update Player" "Create Player")]
-        " "
-        [:a {:href "/players" :role "button" :class "secondary"} "Cancel"]))))
+        [:button {:type "submit"} (if editing? "Update Player" "Create Player")]))))
 
 (defn play-header []
   [:tr
@@ -258,9 +254,7 @@
                  :hx-swap "outerHTML"}
          "Auto-rank by Score"]
         " "
-        [:button {:type "submit"} (if editing? "Update Play" "Create Play")]
-        " "
-        [:a {:href "/plays" :role "button" :class "secondary"} "Cancel"]])))
+        [:button {:type "submit"} (if editing? "Update Play" "Create Play")]])))
 
 (defn leaderboard-table [leaderboard-data]
   [:div {:hx-get "/htmx/leaderboard"
