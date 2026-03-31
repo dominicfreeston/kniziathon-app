@@ -426,8 +426,9 @@
 
 (defn player-detail [id]
   (if-let [player (state/get-player id)]
-    (response/response
-      (views/player-detail player (scoring/player-game-details id)))
+    (let [players-map (into {} (map (fn [p] [(:id p) p]) (state/get-all-players)))]
+      (response/response
+        (views/player-detail player (scoring/player-game-details id) players-map)))
     (response/not-found "Player not found")))
 
 (defn- htmx-fragment [hiccup-data]

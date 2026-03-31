@@ -320,30 +320,48 @@
      "]]
     (leaderboard-table leaderboard-data)))
 
-(defn player-detail [player details]
+(defn- game-plays-table [player detail players-map]
+  [:table {:style "margin-top: 0.5rem; width: 100%;"}
+   [:thead
+    [:tr
+     [:th "Date"]
+     [:th {:class "numeric"} "Rank"]
+     [:th {:class "numeric"} "Score"]
+     [:th {:class "numeric"} "Points"]
+     [:th "Others"]]]
+   [:tbody
+    (for [play (:plays detail)]
+      (let [pr (first (filter #(= (:player-id %) (:id player)) (:player-results play)))
+            others (sort-by :rank (remove #(= (:player-id %) (:id player)) (:player-results play)))
+            pts (scoring/calculate-play-score (:rank pr) (count (:player-results play)) (:weight detail))]
+        [:tr
+         [:td (:timestamp play)]
+         [:td {:class "numeric"} (:rank pr)]
+         [:td {:class "numeric"} (or (:game-score pr) "—")]
+         [:td {:class "numeric"} (str pts " pts")]
+         [:td (str/join ", " (map #(let [p (get players-map (:player-id %))]
+                                     (str (:name p) " (#" (:rank %) ")"))
+                                  others))]]))]])
+
+(defn player-detail [player details players-map]
   (layout (str (:name player) " - Details")
     [:h1 (:name player)]
     [:p [:strong "Total Score: "] (scoring/player-total-score (:id player))]
     [:p [:strong "Total Plays: "] (scoring/player-total-plays (:id player))]
     [:a {:href "/leaderboard"} "← Back to Leaderboard"]
     [:h2 "Game Breakdown"]
-    [:table
-     [:thead
-      [:tr
-       [:th "Game"]
-       [:th {:class "numeric"} "Weight"]
-       [:th {:class "numeric"} "Best Score"]
-       [:th {:class "numeric"} "Rank"]
-       [:th {:class "numeric"} "Plays"]]]
-     [:tbody
-      (for [detail details]
-        [:tr
-         [:td [:a {:href (str "/games/" (:game-id detail) "/plays")} (:game-name detail)]]
-         [:td {:class "numeric"} (:weight detail)]
-         [:td {:class "numeric"} (:best-score detail)]
-         [:td {:class "numeric"} (:rank detail)]
-         [:td {:class "numeric"} (:num-plays detail)]])]]))
-
+    (for [detail details]
+      [:details {:style "border: 1px solid #ccc; border-radius: 4px; margin-bottom: 0.5rem; padding: 0.5rem 0.75rem;"}
+       [:summary {:style "cursor: pointer; display: flex; gap: 2rem; align-items: baseline;"}
+        [:span {:style "flex: 2; font-weight: bold;"}
+         [:a {:href (str "/games/" (:game-id detail) "/plays")
+              :onclick "event.stopPropagation()"}
+          (:game-name detail)]]
+        [:span (str "Weight: " (:weight detail))]
+        [:span (str "Best: " (:best-score detail) " pts")]
+        [:span (str "Rank: " (:rank detail))]
+        [:span (str (:num-plays detail) " play" (when (not= 1 (:num-plays detail)) "s"))]]
+       (game-plays-table player detail players-map)])))
 (defn game-detail [game plays players]
   (layout (str (:name game) " - Plays")
     [:h1 (:name game)]

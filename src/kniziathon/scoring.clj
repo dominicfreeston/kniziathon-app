@@ -95,5 +95,6 @@
                    :best-score best-score
                    :rank (:rank player-result)
                    :num-plays num-plays
-                   :timestamp (:timestamp best-play)})))
+                   :timestamp (:timestamp best-play)
+                   :plays (vec (sort-by :timestamp > game-plays))})))
          (sort-by :best-score >))))
