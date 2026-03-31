@@ -162,6 +162,14 @@
                         (mock/body "num-players=1&player-0-id=p1&player-0-rank=1&add-player-id=")))]
       (is (= 200 (:status resp)))
       (is (= 1 (count (re-seq #"class=\"player-row\"" (:body resp)))))))
+  (testing "selecting new shows inline input form"
+    (state/add-player! {:id "p1" :name "Alice"})
+    (let [resp (app (-> (mock/request :post "/htmx/plays/add-player")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "num-players=1&player-0-id=p1&player-0-rank=1&add-player-id=new")))]
+      (is (= 200 (:status resp)))
+      (is (= 1 (count (re-seq #"class=\"player-row\"" (:body resp)))))
+      (is (str/includes? (:body resp) "new-player-name"))))
   (testing "add-player dropdown absent at 6 players"
     (let [body (str/join "&"
                          (concat ["num-players=6"]
@@ -172,6 +180,25 @@
                         (mock/body body)))]
       (is (= 200 (:status resp)))
       (is (not (str/includes? (:body resp) "add-player-id"))))))
+
+(deftest htmx-create-and-add-player
+  (testing "creates a new player and adds them to the list"
+    (state/add-player! {:id "p1" :name "Alice"})
+    (let [resp (app (-> (mock/request :post "/htmx/plays/create-and-add-player")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "num-players=1&player-0-id=p1&player-0-rank=1&new-player-name=Carol")))]
+      (is (= 200 (:status resp)))
+      (is (= 2 (count (re-seq #"class=\"player-row\"" (:body resp)))))
+      (is (some #(= "Carol" (:name %)) (state/get-all-players)))))
+  (testing "blank name shows input form again without creating player"
+    (state/add-player! {:id "p1" :name "Alice"})
+    (let [player-count-before (count (state/get-all-players))
+          resp (app (-> (mock/request :post "/htmx/plays/create-and-add-player")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "num-players=1&player-0-id=p1&player-0-rank=1&new-player-name=")))]
+      (is (= 200 (:status resp)))
+      (is (str/includes? (:body resp) "new-player-name"))
+      (is (= player-count-before (count (state/get-all-players)))))))
 
 (deftest htmx-remove-player
   (testing "POST /htmx/plays/remove-player removes the indicated row"
@@ -184,13 +211,13 @@
       (is (= 200 (:status resp)))
       ;; 2 rows remain
       (is (= 2 (count (re-seq #"class=\"player-row\"" (:body resp)))))))
-  (testing "remove button absent when only 1 player remains"
+  (testing "remove button present when only 1 player remains"
     (state/add-player! {:id "p1" :name "Alice"})
     (let [resp (app (-> (mock/request :post "/htmx/plays/remove-player")
                         (mock/content-type "application/x-www-form-urlencoded")
                         (mock/body "num-players=2&player-0-id=p1&player-0-rank=1&player-1-id=&player-1-rank=2&remove-idx=1")))]
       (is (= 200 (:status resp)))
-      (is (not (clojure.string/includes? (:body resp) "remove-player"))))))
+      (is (clojure.string/includes? (:body resp) "remove-player")))))
 
 (deftest game-detail-page
   (testing "GET /games/:id/plays returns 200 and lists plays"

@@ -167,7 +167,7 @@
       (for [play (reverse (sort-by :timestamp plays))]
         (play-row play))]]))
 
-(defn- player-entry-row [i pr num-players players]
+(defn- player-entry-row [i pr players]
   [:div {:class "player-row"
          :data-player-id (:player-id pr)
          :style "padding: 0.75rem; margin-bottom: 0.5rem;"}
@@ -190,26 +190,51 @@
               :class "player-score-input"
               :value (:game-score pr)
               :placeholder "Optional"}]]
-    (when (> num-players 1)
-      [:button {:type "button"
-               :hx-post "/htmx/plays/remove-player"
-               :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-               :hx-target "#player-results"
-               :hx-swap "outerHTML"
-               :hx-vals (str "{\"remove-idx\": " i "}")
-               :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-       "Remove"])
+    [:button {:type "button"
+              :hx-post "/htmx/plays/remove-player"
+              :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
+              :hx-target "#player-results"
+              :hx-swap "outerHTML"
+              :hx-vals (str "{\"remove-idx\": " i "}")
+              :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
+     "Remove"]
     [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
     [:input {:type "hidden" :name (str "player-" i "-rank") :value (inc i)}]]])
 
-(defn player-results-fragment [player-results players]
-  (let [num-players (count player-results)]
+(defn player-results-fragment [player-results players & [new-player-input?]]
+  (let [num-players (count player-results)
+        selected-ids (set (map :player-id player-results))
+        available-players (remove #(contains? selected-ids (:id %)) players)]
     [:div {:id "player-results"}
      [:input {:type "hidden" :name "num-players" :value num-players}]
      (for [i (range num-players)]
-       (player-entry-row i (get player-results i) num-players players))
-     (when (< num-players 6)
+       (player-entry-row i (get player-results i) players))
+     (cond
+       new-player-input?
+       [:div {:style "display: flex; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 1rem; align-items: center;"}
+        [:input {:type "text" :name "new-player-name" :placeholder "New player name"
+                 :id "new-player-name-input"
+                 :style "flex: 1; margin: 0;"}]
+        [:button {:type "button"
+                  :hx-post "/htmx/plays/create-and-add-player"
+                  :hx-include "[name^='player-'],[name='num-players'],[name='new-player-name']"
+                  :hx-target "#player-results"
+                  :hx-swap "outerHTML"
+                  :style "margin: 0; width: auto; white-space: nowrap;"}
+         "Add"]
+        [:button {:type "button"
+                  :hx-post "/htmx/plays/add-player"
+                  :hx-vals "{\"add-player-id\": \"\"}"
+                  :hx-include "[name^='player-'],[name='num-players']"
+                  :hx-target "#player-results"
+                  :hx-swap "outerHTML"
+                  :style "margin: 0; width: auto; white-space: nowrap;"}
+         "Cancel"]
+        [:script "document.getElementById('new-player-name-input').focus();"]]
+
+       (< num-players 6)
        [:select {:name "add-player-id"
+                 :autocomplete "off"
                  :hx-post "/htmx/plays/add-player"
                  :hx-trigger "change"
                  :hx-include "[name^='player-'],[name='num-players']"
@@ -217,8 +242,9 @@
                  :hx-swap "outerHTML"
                  :style "margin-top: 0.5rem;"}
         [:option {:value ""} (if (zero? num-players) "-- Select first player --" "-- Add player --")]
-        (for [p (sort-by :name players)]
-          [:option {:value (:id p)} (:name p)])])
+        (for [p (sort-by :name available-players)]
+          [:option {:value (:id p)} (:name p)])
+        [:option {:value "new"} "-- New player --"]])
      (when (> num-players 1)
        [:script
         "(function() {

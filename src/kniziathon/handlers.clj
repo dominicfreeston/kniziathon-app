@@ -466,11 +466,29 @@
 ;; Add / remove player handlers
 (defn add-player [params]
   (let [player-results (parse-player-results params)
-        new-player-id (:add-player-id params)
-        new-results (if (str/blank? new-player-id)
-                      player-results
-                      (conj player-results {:player-id new-player-id}))]
-    (htmx-fragment (views/player-results-fragment new-results (state/get-all-players)))))
+        new-player-id (:add-player-id params)]
+    (cond
+      (= new-player-id "new")
+      (htmx-fragment (views/player-results-fragment player-results (state/get-all-players) true))
+
+      (str/blank? new-player-id)
+      (htmx-fragment (views/player-results-fragment player-results (state/get-all-players)))
+
+      :else
+      (htmx-fragment (views/player-results-fragment
+                       (conj player-results {:player-id new-player-id})
+                       (state/get-all-players))))))
+
+(defn create-and-add-player [params]
+  (let [player-results (parse-player-results params)
+        new-name (:new-player-name params)]
+    (if (str/blank? new-name)
+      (htmx-fragment (views/player-results-fragment player-results (state/get-all-players) true))
+      (let [new-player-id (str (UUID/randomUUID))]
+        (state/add-player! {:id new-player-id :name new-name})
+        (htmx-fragment (views/player-results-fragment
+                         (conj player-results {:player-id new-player-id})
+                         (state/get-all-players)))))))
 
 (defn remove-player [params]
   (let [player-results (parse-player-results params)
