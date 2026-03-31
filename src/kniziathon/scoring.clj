@@ -98,6 +98,10 @@
                    :game-name (:name game)
                    :weight (:weight game)
                    :best-score best-score
+                   :total-score (->> game-plays
+                                     (map #(play-score-for-player % player-id))
+                                     (remove nil?)
+                                     (reduce + 0))
                    :rank (:rank player-result)
                    :num-plays num-plays
                    :timestamp (:timestamp best-play)

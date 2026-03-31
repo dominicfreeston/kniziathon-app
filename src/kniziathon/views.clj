@@ -351,7 +351,7 @@
                                      (str (:name p) " (#" (:rank %) ")"))
                                   others))]]))]])
 
-(defn player-detail [player details players-map]
+(defn player-detail [player details players-map multi-play?]
   (layout (str (:name player) " - Details")
     [:h1 (:name player)]
     [:p [:strong "Total Score: "] (scoring/player-total-score (:id player))]
@@ -366,8 +366,10 @@
               :onclick "event.stopPropagation()"}
           (:game-name detail)]]
         [:span (str "Weight: " (:weight detail))]
-        [:span (str "Best: " (:best-score detail) " pts")]
-        [:span (str "Rank: " (:rank detail))]
+        [:span (if multi-play?
+                 (str "Total Points: " (:total-score detail) " pts")
+                 (str "Best Points: " (:best-score detail) " pts"))]
+        [:span (str "Best Rank: " (:rank detail))]
         [:span (str (:num-plays detail) " play" (when (not= 1 (:num-plays detail)) "s"))]]
        (game-plays-table player detail players-map)])))
 (defn game-detail [game plays players]
