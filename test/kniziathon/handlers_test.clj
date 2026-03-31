@@ -208,3 +208,47 @@
   (testing "GET /games/:id/plays with unknown id returns 404"
     (let [resp (app (mock/request :get "/games/nonexistent/plays"))]
       (is (= 404 (:status resp))))))
+
+(deftest split-player-test
+  (testing "GET /players/:id/split shows the form with plays"
+    (state/add-game! {:id "g1" :name "Chess" :weight 1})
+    (state/add-player! {:id "p1" :name "Alice"})
+    (state/add-player! {:id "p2" :name "Bob"})
+    (state/add-play! {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+                      :player-results [{:player-id "p1" :rank 1}
+                                       {:player-id "p2" :rank 2}]})
+    (let [resp (app (mock/request :get "/players/p1/split"))]
+      (is (= 200 (:status resp)))
+      (is (str/includes? (:body resp) "Alice"))
+      (is (str/includes? (:body resp) "Chess"))))
+  (testing "GET /players/:id/split with unknown id returns 404"
+    (let [resp (app (mock/request :get "/players/nonexistent/split"))]
+      (is (= 404 (:status resp)))))
+  (testing "POST /players/:id/split creates new player and reassigns checked plays"
+    (state/add-game! {:id "g1" :name "Chess" :weight 1})
+    (state/add-player! {:id "p1" :name "Alice"})
+    (state/add-player! {:id "p2" :name "Bob"})
+    (state/add-play! {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+                      :player-results [{:player-id "p1" :rank 1}
+                                       {:player-id "p2" :rank 2}]})
+    (state/add-play! {:id "play2" :game-id "g1" :timestamp "2024-01-02"
+                      :player-results [{:player-id "p1" :rank 1}
+                                       {:player-id "p2" :rank 2}]})
+    (let [resp (app (-> (mock/request :post "/players/p1/split")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "new-player-name=Alice+B&move-play-play1=true")))]
+      (is (= 302 (:status resp)))
+      ;; play1 should now belong to the new player, not p1
+      (let [play1 (state/get-play "play1")
+            play2 (state/get-play "play2")
+            p1-ids (set (map :player-id (:player-results play1)))
+            p2-ids (set (map :player-id (:player-results play2)))]
+        (is (not (contains? p1-ids "p1")) "play1 should be reassigned away from p1")
+        (is (contains? p2-ids "p1") "play2 should still belong to p1"))))
+  (testing "POST /players/:id/split with blank name returns error"
+    (state/add-player! {:id "p1" :name "Alice"})
+    (let [resp (app (-> (mock/request :post "/players/p1/split")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "new-player-name=")))]
+      (is (= 200 (:status resp)))
+      (is (str/includes? (:body resp) "New player name is required")))))

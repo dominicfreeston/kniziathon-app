@@ -268,6 +268,55 @@
         ;; Missing source or target, show form again
         (response/response (views/merge-players-form players leaderboard nil nil nil))))))
 
+;; Player split handlers
+(defn- split-player-view-data [id]
+  (let [player (state/get-player id)
+        plays (scoring/player-plays id)
+        games-map (into {} (map (fn [g] [(:id g) g]) (state/get-all-games)))
+        players-map (into {} (map (fn [p] [(:id p) p]) (state/get-all-players)))]
+    [player plays games-map players-map]))
+
+(defn split-player-form-get [id]
+  (if-let [player (state/get-player id)]
+    (let [[_ plays games-map players-map] (split-player-view-data id)]
+      (response/response (views/split-player-form player plays games-map players-map)))
+    (response/not-found "Player not found")))
+
+(defn split-player [id params]
+  (let [[player plays games-map players-map] (split-player-view-data id)]
+    (if (nil? player)
+      (response/not-found "Player not found")
+      (let [new-name (:new-player-name params)
+            errors (cond-> []
+                     (str/blank? new-name) (conj "New player name is required"))]
+        (if (seq errors)
+          (response/response (views/split-player-form player plays games-map players-map errors))
+          (let [new-player-id (str (UUID/randomUUID))
+                new-player {:id new-player-id :name new-name}
+                move-play-ids (into #{} (for [[k v] params
+                                              :when (and (str/starts-with? (name k) "move-play-")
+                                                         (= v "true"))]
+                                          (subs (name k) (count "move-play-"))))]
+            (swap! state/app-state
+              (fn [s]
+                (let [updated-plays
+                      (into {} (map (fn [[play-id play]]
+                                      [play-id
+                                       (if (contains? move-play-ids play-id)
+                                         (update play :player-results
+                                           (fn [results]
+                                             (mapv (fn [pr]
+                                                     (if (= (:player-id pr) id)
+                                                       (assoc pr :player-id new-player-id)
+                                                       pr))
+                                                   results)))
+                                         play)])
+                                    (:plays s)))]
+                  (-> s
+                      (assoc-in [:players new-player-id] new-player)
+                      (assoc :plays updated-plays)))))
+            (response/redirect "/players")))))))
+
 ;; Plays handlers
 (defn parse-player-results [params]
   (let [num-players (or (parse-int (:num-players params)) 2)]

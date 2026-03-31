@@ -1,6 +1,7 @@
 (ns kniziathon.views
   (:require [hiccup.page :refer [html5]]
             [hiccup.form :as form]
+            [clojure.string :as str]
             [kniziathon.state :as state]
             [kniziathon.scoring :as scoring]))
 
@@ -96,6 +97,8 @@
              [:td {:class "numeric"} (or (:total-score stats) 0)]
              [:td {:class "actions"}
               [:a {:href (str "/players/" (:id player) "/edit")} "Edit"]
+              " "
+              [:a {:href (str "/players/" (:id player) "/split")} "Split"]
               [:form {:method "post"
                       :action (str "/players/" (:id player) "/delete")
                       :style "display: inline;"}
@@ -378,6 +381,49 @@
                          :class "delete-btn"
                          :onclick "return confirm('Delete this play? This cannot be undone.')"}
                 "Delete"]]]]))]])))
+
+(defn split-player-form [player plays games-map players-map & [errors]]
+  (layout (str "Split Player: " (:name player))
+    [:h1 (str "Split Player: " (:name player))]
+    [:p "Create a new player and select which plays to move to them. Unchecked plays stay with " (:name player) "."]
+    (when errors
+      [:div {:class "error"}
+       [:ul (for [err errors] [:li err])]])
+    [:form {:method "post" :action (str "/players/" (:id player) "/split")}
+     [:label {:for "new-player-name"} "New Player Name"]
+     [:input {:type "text" :name "new-player-name" :id "new-player-name" :required true
+              :placeholder "Name for the new player"}]
+     [:h2 "Plays"]
+     (if (empty? plays)
+       [:p "This player has no plays to split."]
+       [:table
+        [:thead
+         [:tr
+          [:th "Move to new player"]
+          [:th "Game"]
+          [:th "Date"]
+          [:th "Result"]
+          [:th "Other Players"]]]
+        [:tbody
+         (for [play (reverse (sort-by :timestamp plays))]
+           (let [game (get games-map (:game-id play))
+                 player-result (first (filter #(= (:player-id %) (:id player))
+                                              (:player-results play)))
+                 others (remove #(= (:player-id %) (:id player)) (:player-results play))]
+             [:tr
+              [:td {:style "text-align: center;"}
+               [:input {:type "checkbox"
+                        :name (str "move-play-" (:id play))
+                        :value "true"}]]
+              [:td [:a {:href (str "/games/" (:game-id play) "/plays")} (:name game)]]
+              [:td (:timestamp play)]
+              [:td (str "Rank " (:rank player-result) " of " (count (:player-results play))
+                        (when (:game-score player-result)
+                          (str " (score: " (:game-score player-result) ")")))]
+              [:td (str/join ", " (map #(let [p (get players-map (:player-id %))]
+                                          (str (:name p) " (#" (:rank %) ")"))
+                                       (sort-by :rank others)))]]))]])
+     [:button {:type "submit"} "Split Player"]]))
 
 (defn merge-players-form [players leaderboard source-player target-player preview-data & [errors]]
   (let [score-map (into {} (map (fn [p] [(:player-id p) p]) leaderboard))]

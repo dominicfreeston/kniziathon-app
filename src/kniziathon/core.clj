@@ -31,6 +31,8 @@
   (POST "/players/merge" {params :params} (handlers/merge-players params))
   (GET "/players/new" [] (handlers/new-player-form))
   (POST "/players" {params :params} (handlers/create-player params))
+  (GET "/players/:id/split" [id] (handlers/split-player-form-get id))
+  (POST "/players/:id/split" [id :as {params :params}] (handlers/split-player id params))
   (GET "/players/:id/edit" [id] (handlers/edit-player-form id))
   (POST "/players/:id" [id :as {params :params}] (handlers/update-player (assoc params :id id)))
   (POST "/players/:id/delete" [id] (handlers/delete-player id))
