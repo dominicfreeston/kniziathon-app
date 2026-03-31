@@ -12,7 +12,7 @@
 
 (defroutes app-routes
   ;; Home
-  (GET "/" [] (response/redirect "/games"))
+  (GET "/" [] (response/redirect "/leaderboard"))
   
   ;; Games
   (GET "/games" [] (handlers/games-list))
