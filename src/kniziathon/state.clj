@@ -74,6 +74,12 @@
 (defn get-all-plays []
   (vals (:plays @app-state)))
 
+(defn get-setting [k]
+  (get-in @app-state [:settings k]))
+
+(defn toggle-setting! [k]
+  (swap! app-state update-in [:settings k] not))
+
 (defn clear-all-data! []
   (reset! app-state {:games {} :players {} :plays {}}))
 

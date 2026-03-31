@@ -1,5 +1,6 @@
 .fullscreen-mode nav { display: none; }
 .fullscreen-mode main { margin-top: 0; }
+.fullscreen-mode .scoring-mode-controls { display: none !important; }
 table { 
     width: 100%;
     border-collapse: collapse;

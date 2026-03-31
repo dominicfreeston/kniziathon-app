@@ -48,7 +48,8 @@
   ;; Leaderboard
   (GET "/leaderboard" [] (handlers/leaderboard))
   (GET "/leaderboard/player/:id" [id] (handlers/player-detail id))
-  
+  (POST "/settings/toggle-scoring-mode" [] (handlers/toggle-scoring-mode))
+
   ;; Data Management
   (GET "/data" [] (handlers/data-management))
   (POST "/data/export" [] (handlers/export-data))

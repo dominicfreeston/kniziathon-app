@@ -417,7 +417,11 @@
 
 (defn leaderboard []
   (response/response
-    (views/leaderboard (scoring/leaderboard-data))))
+    (views/leaderboard (scoring/leaderboard-data) (state/get-setting :multi-play-scoring))))
+
+(defn toggle-scoring-mode []
+  (state/toggle-setting! :multi-play-scoring)
+  (response/redirect "/leaderboard"))
 
 (defn leaderboard-fragment []
   (-> (hiccup/html (views/leaderboard-table (scoring/leaderboard-data)))

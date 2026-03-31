@@ -44,10 +44,15 @@
          (into {}))))
 
 (defn player-total-score [player-id]
-  "Sum of best scores across all games"
-  (->> (player-best-scores player-id)
-       vals
-       (reduce + 0)))
+  "Sum of best scores per game (standard) or all play scores (multi-play mode)"
+  (if (state/get-setting :multi-play-scoring)
+    (->> (player-plays player-id)
+         (map #(play-score-for-player % player-id))
+         (remove nil?)
+         (reduce + 0))
+    (->> (player-best-scores player-id)
+         vals
+         (reduce + 0))))
 
 (defn player-total-plays [player-id]
   "Total number of plays this player has participated in"
@@ -96,5 +101,5 @@
                    :rank (:rank player-result)
                    :num-plays num-plays
                    :timestamp (:timestamp best-play)
-                   :plays (vec (sort-by :timestamp > game-plays))})))
+                   :plays (vec (reverse (sort-by :timestamp game-plays)))})))
          (sort-by :best-score >))))

@@ -296,9 +296,17 @@
           [:td {:class "numeric"} (:total-plays player)]])
        leaderboard-data)]]])
 
-(defn leaderboard [leaderboard-data]
+(defn leaderboard [leaderboard-data multi-play?]
   (layout "Leaderboard"
     [:h1 "Kniziathon Leaderboard"]
+    [:div {:class "scoring-mode-controls"
+           :style "display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;"}
+     [:span {:style "color: #666;"}
+      "Scoring: "
+      [:strong (if multi-play? "Multi-play (all plays count)" "Standard (best per game)")]]
+     [:form {:method "post" :action "/settings/toggle-scoring-mode" :style "margin: 0;"}
+      [:button {:type "submit" :class "secondary" :style "padding: 0.25rem 0.75rem; font-size: 0.85rem;"}
+       (if multi-play? "Switch to Standard" "Switch to Multi-play")]]]
     [:div
      [:button {:id "fullscreen-btn" :onclick "enterFullscreen()"}
       "Enter Fullscreen"]

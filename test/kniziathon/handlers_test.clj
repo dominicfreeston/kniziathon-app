@@ -252,3 +252,37 @@
                         (mock/body "new-player-name=")))]
       (is (= 200 (:status resp)))
       (is (str/includes? (:body resp) "New player name is required")))))
+
+(deftest toggle-scoring-mode-test
+  (testing "POST /settings/toggle-scoring-mode toggles the setting and redirects"
+    (is (not (state/get-setting :multi-play-scoring)) "starts off")
+    (let [resp (app (mock/request :post "/settings/toggle-scoring-mode"))]
+      (is (= 302 (:status resp)))
+      (is (state/get-setting :multi-play-scoring) "now on"))
+    (let [resp (app (mock/request :post "/settings/toggle-scoring-mode"))]
+      (is (= 302 (:status resp)))
+      (is (not (state/get-setting :multi-play-scoring)) "back off")))
+  (testing "leaderboard page shows current scoring mode label"
+    (let [resp (app (mock/request :get "/leaderboard"))]
+      (is (= 200 (:status resp)))
+      (is (str/includes? (:body resp) "Standard (best per game)")))
+    (state/toggle-setting! :multi-play-scoring)
+    (let [resp (app (mock/request :get "/leaderboard"))]
+      (is (str/includes? (:body resp) "Multi-play (all plays count)")))
+    (state/toggle-setting! :multi-play-scoring)))
+
+(deftest player-detail-multi-play-mode
+  (testing "GET /leaderboard/player/:id returns 200 in multi-play mode"
+    (state/add-game! {:id "g1" :name "Chess" :weight 2})
+    (state/add-player! {:id "p1" :name "Alice"})
+    (state/add-player! {:id "p2" :name "Bob"})
+    (state/add-play! {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+                      :player-results [{:player-id "p1" :rank 1}
+                                       {:player-id "p2" :rank 2}]})
+    (state/add-play! {:id "play2" :game-id "g1" :timestamp "2024-01-02"
+                      :player-results [{:player-id "p1" :rank 2}
+                                       {:player-id "p2" :rank 1}]})
+    (state/toggle-setting! :multi-play-scoring)
+    (let [resp (app (mock/request :get "/leaderboard/player/p1"))]
+      (state/toggle-setting! :multi-play-scoring)
+      (is (= 200 (:status resp))))))

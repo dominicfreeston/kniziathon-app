@@ -105,7 +105,18 @@
       ;; g1: rank 1 in 2-player, weight 1 => 4; g2: rank 2 in 2-player, weight 1 => 1
       (is (= 5 (scoring/player-total-score p1))))
     (testing "player with no plays scores 0"
-      (is (= 0 (scoring/player-total-score "nobody"))))))
+      (is (= 0 (scoring/player-total-score "nobody"))))
+    (testing "multi-play mode sums all play scores instead of best per game"
+      ;; Add a second play for g1 where p1 gets rank 2 (score 1)
+      ;; Standard: best per game => g1:4 + g2:1 = 5
+      ;; Multi-play: all plays => g1 rank1:4 + g1 rank2:1 + g2 rank2:1 = 6
+      (state/add-play! {:id "play3" :game-id "g1" :timestamp "2024-01-02"
+                        :player-results [{:player-id p1 :rank 2}
+                                         {:player-id "p2" :rank 1}]})
+      (is (= 5 (scoring/player-total-score p1)) "standard mode unchanged")
+      (state/toggle-setting! :multi-play-scoring)
+      (is (= 6 (scoring/player-total-score p1)) "multi-play mode sums all plays")
+      (state/toggle-setting! :multi-play-scoring))))
 
 (deftest leaderboard-data-test
   (let [g1 {:id "g1" :name "Chess" :weight 1}
