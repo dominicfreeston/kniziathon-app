@@ -302,6 +302,94 @@
       (is (str/includes? (:body resp) "Multi-play (all plays count)")))
     (state/toggle-setting! *test-state* :multi-play-scoring)))
 
+;; --- valid-competition-ranks? ---
+
+(deftest valid-competition-ranks-test
+  (testing "standard consecutive ranks are valid"
+    (is (true? (#'handlers/valid-competition-ranks? [1 2])))
+    (is (true? (#'handlers/valid-competition-ranks? [1 2 3])))
+    (is (true? (#'handlers/valid-competition-ranks? [1 2 3 4 5 6]))))
+  (testing "tied ranks with correct skip are valid"
+    (is (true? (#'handlers/valid-competition-ranks? [1 1 3])))
+    (is (true? (#'handlers/valid-competition-ranks? [1 2 2 4])))
+    (is (true? (#'handlers/valid-competition-ranks? [1 1 1 4])))
+    (is (true? (#'handlers/valid-competition-ranks? [1 1 3 3]))))
+  (testing "all tied is valid"
+    (is (true? (#'handlers/valid-competition-ranks? [1 1])))
+    (is (true? (#'handlers/valid-competition-ranks? [1 1 1]))))
+  (testing "invalid rank patterns"
+    (is (false? (#'handlers/valid-competition-ranks? [1 1 2])))
+    (is (false? (#'handlers/valid-competition-ranks? [1 3])))
+    (is (false? (#'handlers/valid-competition-ranks? [2 3])))
+    (is (false? (#'handlers/valid-competition-ranks? [1 2 4])))
+    (is (false? (#'handlers/valid-competition-ranks? [1 1 4])))))
+
+;; --- reset-ranks ---
+
+(deftest reset-ranks-test
+  (testing "assigns sequential ranks starting at 1"
+    (is (= [{:player-id "a" :rank 1} {:player-id "b" :rank 2} {:player-id "c" :rank 3}]
+           (#'handlers/reset-ranks [{:player-id "a" :rank 5} {:player-id "b" :rank 5} {:player-id "c" :rank 7}]))))
+  (testing "preserves other keys"
+    (is (= [{:player-id "a" :rank 1 :game-score 10}]
+           (#'handlers/reset-ranks [{:player-id "a" :rank 99 :game-score 10}])))))
+
+;; --- toggle-tie-at ---
+
+(deftest toggle-tie-at-test
+  (testing "toggle tie on between positions 0 and 1"
+    (let [results [{:player-id "a" :rank 1} {:player-id "b" :rank 2} {:player-id "c" :rank 3}]
+          toggled (#'handlers/toggle-tie-at results 0)]
+      (is (= [1 1 3] (mapv :rank toggled)))))
+  (testing "toggle tie off between already-tied positions"
+    (let [results [{:player-id "a" :rank 1} {:player-id "b" :rank 1} {:player-id "c" :rank 3}]
+          toggled (#'handlers/toggle-tie-at results 0)]
+      (is (= [1 2 3] (mapv :rank toggled)))))
+  (testing "toggle tie on at second boundary"
+    (let [results [{:player-id "a" :rank 1} {:player-id "b" :rank 2} {:player-id "c" :rank 3}]
+          toggled (#'handlers/toggle-tie-at results 1)]
+      (is (= [1 2 2] (mapv :rank toggled)))))
+  (testing "multiple ties"
+    (let [results [{:player-id "a" :rank 1} {:player-id "b" :rank 1} {:player-id "c" :rank 3}]
+          toggled (#'handlers/toggle-tie-at results 1)]
+      (is (= [1 1 1] (mapv :rank toggled)))))
+  (testing "untie middle of three-way tie"
+    (let [results [{:player-id "a" :rank 1} {:player-id "b" :rank 1} {:player-id "c" :rank 1}]
+          toggled (#'handlers/toggle-tie-at results 1)]
+      (is (= [1 1 3] (mapv :rank toggled))))))
+
+;; --- validate-play with tied ranks ---
+
+(deftest validate-play-tied-ranks-test
+  (state/add-game! *test-state* {:id "g1" :name "Chess" :weight 1})
+  (testing "tied ranks [1 1 3] are accepted"
+    (let [results [{:player-id "p1" :rank 1} {:player-id "p2" :rank 1} {:player-id "p3" :rank 3}]]
+      (is (empty? (#'handlers/validate-play *test-state* "g1" results)))))
+  (testing "tied ranks [1 1 2] are rejected"
+    (let [results [{:player-id "p1" :rank 1} {:player-id "p2" :rank 1} {:player-id "p3" :rank 2}]]
+      (is (seq (#'handlers/validate-play *test-state* "g1" results)))))
+  (testing "all tied [1 1] is accepted"
+    (let [results [{:player-id "p1" :rank 1} {:player-id "p2" :rank 1}]]
+      (is (empty? (#'handlers/validate-play *test-state* "g1" results))))))
+
+;; --- HTMX toggle-tie endpoint ---
+
+(deftest htmx-toggle-tie-test
+  (testing "POST /htmx/plays/toggle-tie toggles a tie and returns fragment"
+    (state/add-player! *test-state* {:id "p1" :name "Alice"})
+    (state/add-player! *test-state* {:id "p2" :name "Bob"})
+    (state/add-player! *test-state* {:id "p3" :name "Carol"})
+    (let [resp (*test-app* (-> (mock/request :post "/htmx/plays/toggle-tie")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "num-players=3&player-0-id=p1&player-0-rank=1&player-1-id=p2&player-1-rank=2&player-2-id=p3&player-2-rank=3&tie-idx=0")))]
+      (is (= 200 (:status resp)))
+      (is (str/includes? (:body resp) "player-row"))
+      ;; After toggling tie at idx 0, both p1 and p2 should show rank 1
+      ;; The hidden rank inputs should reflect the tie
+      (is (re-find #"player-0-rank.*value=\"1\"" (:body resp)))
+      (is (re-find #"player-1-rank.*value=\"1\"" (:body resp)))
+      (is (re-find #"player-2-rank.*value=\"3\"" (:body resp))))))
+
 (deftest player-detail-multi-play-mode
   (testing "GET /leaderboard/player/:id returns 200 in multi-play mode"
     (state/add-game! *test-state* {:id "g1" :name "Chess" :weight 2})

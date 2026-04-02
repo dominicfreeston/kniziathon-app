@@ -167,38 +167,50 @@
         (play-row play games-map players-map))]]))
 
 (defn- player-entry-row [i pr players]
-  [:div {:class "player-row"
-         :data-player-id (:player-id pr)
-         :style "padding: 0.75rem; margin-bottom: 0.5rem;"}
-   [:div {:style "display: flex; align-items: center; gap: 1rem;"}
-    [:div {:class "drag-handle"
-           :style "cursor: grab; font-size: 1.2rem; color: #aaa; user-select: none; padding: 0 0.25rem;"}
-     "⠿"]
-    [:strong {:style "font-size: 1.1rem; min-width: 2rem;"} (str "#" (inc i))]
-    [:div {:style "flex: 2; min-width: 200px;"}
-     [:label {:for (str "player-" i "-id") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Player"]
-     [:select {:name (str "player-" i "-id") :required true}
-      [:option {:value ""} "-- Select --"]
-      (for [p (sort-by :name players)]
-        [:option {:value (:id p) :selected (= (:id p) (:player-id pr))}
-         (:name p)])]]
-    [:div {:style "flex: 1; min-width: 120px;"}
-     [:label {:for (str "player-" i "-score") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Score"]
-     [:input {:type "number"
-              :name (str "player-" i "-score")
-              :class "player-score-input"
-              :value (:game-score pr)
-              :placeholder "Optional"}]]
-    [:button {:type "button"
-              :hx-post "/htmx/plays/remove-player"
-              :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
-              :hx-target "#player-results"
-              :hx-swap "outerHTML"
-              :hx-vals (str "{\"remove-idx\": " i "}")
-              :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
-     "Remove"]
-    [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
-    [:input {:type "hidden" :name (str "player-" i "-rank") :value (inc i)}]]])
+  (let [rank (or (:rank pr) (inc i))]
+    [:div {:class "player-row"
+           :data-player-id (:player-id pr)
+           :style "padding: 0.75rem;"}
+     [:div {:style "display: flex; align-items: center; gap: 1rem;"}
+      [:div {:class "drag-handle"
+             :style "cursor: grab; font-size: 1.2rem; color: #aaa; user-select: none; padding: 0 0.25rem;"}
+       "⠿"]
+      [:strong {:style "font-size: 1.1rem; min-width: 2rem;"} (str "#" rank)]
+      [:div {:style "flex: 2; min-width: 200px;"}
+       [:label {:for (str "player-" i "-id") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Player"]
+       [:select {:name (str "player-" i "-id") :required true}
+        [:option {:value ""} "-- Select --"]
+        (for [p (sort-by :name players)]
+          [:option {:value (:id p) :selected (= (:id p) (:player-id pr))}
+           (:name p)])]]
+      [:div {:style "flex: 1; min-width: 120px;"}
+       [:label {:for (str "player-" i "-score") :style "margin-bottom: 0.25rem; font-size: 0.9rem;"} "Score"]
+       [:input {:type "number"
+                :name (str "player-" i "-score")
+                :class "player-score-input"
+                :value (:game-score pr)
+                :placeholder "Optional"}]]
+      [:button {:type "button"
+                :hx-post "/htmx/plays/remove-player"
+                :hx-include "[name^='player-'],[name='num-players'],[name='game-id']"
+                :hx-target "#player-results"
+                :hx-swap "outerHTML"
+                :hx-vals (str "{\"remove-idx\": " i "}")
+                :style "padding: 0.25rem 0.5rem; font-size: 0.75rem;"}
+       "Remove"]
+      [:input {:type "hidden" :name (str "player-" i "-idx") :value i}]
+      [:input {:type "hidden" :name (str "player-" i "-rank") :value rank}]]]))
+
+(defn- tie-toggle [i tied? num-players]
+  [:div {:class (str "tie-toggle" (when tied? " tied"))}
+   [:button {:type "button"
+             :hx-post "/htmx/plays/toggle-tie"
+             :hx-include "[name^='player-'],[name='num-players']"
+             :hx-target "#player-results"
+             :hx-swap "outerHTML"
+             :hx-vals (str "{\"tie-idx\": " i "}")
+             :class "tie-btn"}
+    (if tied? "═ tied ═" "tie")]])
 
 (defn player-results-fragment [player-results players & [new-player-input?]]
   (let [num-players (count player-results)
@@ -207,7 +219,13 @@
     [:div {:id "player-results"}
      [:input {:type "hidden" :name "num-players" :value num-players}]
      (for [i (range num-players)]
-       (player-entry-row i (get player-results i) players))
+       (let [pr (get player-results i)
+             next-pr (when (< i (dec num-players)) (get player-results (inc i)))
+             tied? (and next-pr (= (:rank pr) (:rank next-pr)))]
+         (list
+           (player-entry-row i pr players)
+           (when (< i (dec num-players))
+             (tie-toggle i tied? num-players)))))
      (cond
        new-player-input?
        [:div {:style "display: flex; gap: 0.5rem; margin-top: 0.5rem; margin-bottom: 1rem; align-items: center;"}

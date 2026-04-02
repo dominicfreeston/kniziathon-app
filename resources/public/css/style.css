@@ -282,7 +282,6 @@ td.numeric {
 /* === Player entry rows (play forms) === */
 
 .player-row {
-  margin-bottom: 0.5rem;
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--border-radius);
@@ -307,6 +306,47 @@ td.numeric {
 .player-row input[type='number'] {
   width: 100%;
   margin-bottom: 0;
+}
+
+/* Tie toggles between player rows */
+.tie-toggle {
+  text-align: center;
+  padding: 0.125rem 0;
+  margin: 0.125rem 0;
+}
+
+.tie-btn {
+  background: transparent;
+  border: 1px dashed var(--border);
+  color: var(--text-muted);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 400;
+  padding: 0.1rem 1.5rem;
+  box-shadow: none;
+  cursor: pointer;
+  border-radius: 2rem;
+  transition: border-color var(--transition), color var(--transition), background var(--transition);
+}
+
+.tie-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: none;
+}
+
+.tie-toggle.tied .tie-btn {
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.tie-toggle.tied .tie-btn:hover {
+  background: transparent;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 /* === Flash messages === */

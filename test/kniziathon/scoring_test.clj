@@ -59,7 +59,21 @@
     (let [results [{:player-id "a"} {:player-id "b"}]
           ranked (scoring/auto-rank-by-scores results)]
       (is (= 2 (count ranked)))
-      (is (every? #(nil? (:rank %)) ranked)))))
+      (is (every? #(nil? (:rank %)) ranked))))
+  (testing "tied scores get the same rank with next rank skipping"
+    (let [results [{:player-id "a" :game-score 20}
+                   {:player-id "b" :game-score 20}
+                   {:player-id "c" :game-score 10}]
+          ranked (scoring/auto-rank-by-scores results)]
+      (is (= 1 (:rank (first ranked))))
+      (is (= 1 (:rank (second ranked))))
+      (is (= 3 (:rank (nth ranked 2))))))
+  (testing "three-way tie all get rank 1"
+    (let [results [{:player-id "a" :game-score 15}
+                   {:player-id "b" :game-score 15}
+                   {:player-id "c" :game-score 15}]
+          ranked (scoring/auto-rank-by-scores results)]
+      (is (every? #(= 1 (:rank %)) ranked)))))
 
 ;; --- state-dependent scoring ---
 
@@ -141,6 +155,61 @@
         (is (contains? entry :games-played))
         (is (contains? entry :total-plays))
         (is (contains? entry :rank))))))
+
+(deftest tied-rank-scoring-test
+  (testing "tied players both get full points for their shared rank"
+    ;; Two players tied at rank 1 in a 3-player game: both get 5 pts (rank 1 in 3-player)
+    (let [s (state/create-state)
+          g1 {:id "g1" :name "Chess" :weight 1}]
+      (state/add-game! s g1)
+      (state/add-player! s {:id "p1" :name "Alice"})
+      (state/add-player! s {:id "p2" :name "Bob"})
+      (state/add-player! s {:id "p3" :name "Carol"})
+      (state/add-play! s {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+                          :player-results [{:player-id "p1" :rank 1}
+                                           {:player-id "p2" :rank 1}
+                                           {:player-id "p3" :rank 3}]})
+      (is (= 5 (scoring/play-score-for-player s (state/get-play s "play1") "p1"))
+          "rank 1 in 3-player = 5 pts")
+      (is (= 5 (scoring/play-score-for-player s (state/get-play s "play1") "p2"))
+          "tied rank 1 also gets 5 pts")
+      (is (= 1 (scoring/play-score-for-player s (state/get-play s "play1") "p3"))
+          "rank 3 in 3-player = 1 pt")))
+
+  (testing "tied players with game weight multiplier"
+    (let [s (state/create-state)
+          g1 {:id "g1" :name "Go" :weight 2}]
+      (state/add-game! s g1)
+      (state/add-player! s {:id "p1" :name "Alice"})
+      (state/add-player! s {:id "p2" :name "Bob"})
+      (state/add-play! s {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+                          :player-results [{:player-id "p1" :rank 1}
+                                           {:player-id "p2" :rank 1}]})
+      ;; Both rank 1 in 2-player game = 4 pts * weight 2 = 8
+      (is (= 8 (scoring/play-score-for-player s (state/get-play s "play1") "p1")))
+      (is (= 8 (scoring/play-score-for-player s (state/get-play s "play1") "p2")))))
+
+  (testing "leaderboard reflects tied in-game ranks correctly"
+    (let [s (state/create-state)
+          g1 {:id "g1" :name "Chess" :weight 1}]
+      (state/add-game! s g1)
+      (state/add-player! s {:id "p1" :name "Alice"})
+      (state/add-player! s {:id "p2" :name "Bob"})
+      (state/add-player! s {:id "p3" :name "Carol"})
+      ;; p1 and p2 tie for 1st, p3 is 3rd
+      (state/add-play! s {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+                          :player-results [{:player-id "p1" :rank 1}
+                                           {:player-id "p2" :rank 1}
+                                           {:player-id "p3" :rank 3}]})
+      (let [board (scoring/leaderboard-data s)]
+        ;; p1 and p2 both scored 5, p3 scored 1
+        (is (= 5 (:total-score (first board))))
+        (is (= 5 (:total-score (second board))))
+        (is (= 1 (:total-score (nth board 2))))
+        ;; p1 and p2 share leaderboard rank 1, p3 is rank 3
+        (is (= 1 (:rank (first board))))
+        (is (= 1 (:rank (second board))))
+        (is (= 3 (:rank (nth board 2))))))))
 
 (deftest leaderboard-tied-ranks
   (let [s (state/create-state)

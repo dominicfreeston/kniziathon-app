@@ -67,6 +67,7 @@
   (POST "/htmx/plays/add-player" request (handlers/add-player request))
   (POST "/htmx/plays/remove-player" request (handlers/remove-player request))
   (POST "/htmx/plays/reorder-players" request (handlers/reorder-players request))
+  (POST "/htmx/plays/toggle-tie" request (handlers/toggle-tie request))
   (POST "/htmx/plays/create-and-add-player" request (handlers/create-and-add-player request))
 
   ;; Static resources

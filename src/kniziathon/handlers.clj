@@ -353,6 +353,47 @@
                    :rank rank}
             game-score (assoc :game-score game-score)))))))
 
+(defn valid-competition-ranks?
+  "Check that ranks follow standard competition ranking rules.
+   Sorted ranks: each rank r appearing at 0-indexed position p must equal p+1,
+   and ties (duplicate ranks) are allowed."
+  [ranks]
+  (let [sorted (sort ranks)]
+    (every? identity
+      (map-indexed
+        (fn [i r]
+          (or (zero? i)
+              (= r (nth sorted (dec i)))     ;; tied with previous
+              (= r (inc i))))                ;; rank equals 1-based position
+        sorted))))
+
+(defn reset-ranks
+  "Assign ranks 1,2,3...N with no ties."
+  [player-results]
+  (vec (map-indexed (fn [i pr] (assoc pr :rank (inc i))) player-results)))
+
+(defn toggle-tie-at
+  "Toggle a tie between positions idx and idx+1. Recalculates all ranks."
+  [player-results idx]
+  (let [ranks (mapv :rank player-results)
+        currently-tied? (= (nth ranks idx) (nth ranks (inc idx)))
+        ;; Build set of tied pairs from current ranks
+        tied-set (set (for [i (range (dec (count ranks)))
+                           :when (= (nth ranks i) (nth ranks (inc i)))]
+                       i))
+        new-tied-set (if currently-tied?
+                       (disj tied-set idx)
+                       (conj tied-set idx))
+        ;; Recalculate ranks from tie set
+        new-ranks (reduce (fn [result i]
+                            (conj result
+                                  (if (and (pos? i) (contains? new-tied-set (dec i)))
+                                    (peek result)
+                                    (inc i))))
+                          [1]
+                          (range 1 (count player-results)))]
+    (vec (map-indexed (fn [i pr] (assoc pr :rank (nth new-ranks i))) player-results))))
+
 (defn- validate-play [s game-id player-results]
   (let [player-ids (map :player-id player-results)
         ranks (map :rank player-results)
@@ -367,8 +408,8 @@
       (not= (count player-ids) (count (set player-ids))) (conj "Duplicate players selected")
       (some nil? ranks) (conj "All ranks must be filled")
       (and (not-any? nil? ranks)
-           (not= (sort ranks) (range 1 (inc num-players))))
-        (conj (str "Ranks must be consecutive from 1 to " num-players)))))
+           (not (valid-competition-ranks? ranks)))
+        (conj "Invalid ranks — ties must share a rank and the next rank must skip accordingly"))))
 
 (defn plays-list [request]
   (let [s (get-state request)
@@ -490,6 +531,15 @@
         ranked (scoring/auto-rank-by-scores (parse-player-results params))]
     (htmx-fragment (views/player-results-fragment ranked (state/get-all-players s)))))
 
+;; Toggle tie handler
+(defn toggle-tie [request]
+  (let [s (get-state request)
+        params (:params request)
+        player-results (parse-player-results params)
+        tie-idx (parse-int (:tie-idx params))
+        toggled (toggle-tie-at player-results tie-idx)]
+    (htmx-fragment (views/player-results-fragment toggled (state/get-all-players s)))))
+
 ;; Move player handler
 (defn move-player [request]
   (let [s (get-state request)
@@ -504,13 +554,13 @@
                   (let [temp (get player-results move-idx)
                         other (get player-results (inc move-idx))]
                     (-> player-results (assoc move-idx other) (assoc (inc move-idx) temp))))]
-    (htmx-fragment (views/player-results-fragment swapped (state/get-all-players s)))))
+    (htmx-fragment (views/player-results-fragment (reset-ranks swapped) (state/get-all-players s)))))
 
 ;; Reorder players handler
 (defn reorder-players [request]
   (let [s (get-state request)
         params (:params request)]
-    (htmx-fragment (views/player-results-fragment (parse-player-results params) (state/get-all-players s)))))
+    (htmx-fragment (views/player-results-fragment (reset-ranks (parse-player-results params)) (state/get-all-players s)))))
 
 ;; Add / remove player handlers
 (defn add-player [request]
@@ -527,7 +577,7 @@
 
       :else
       (htmx-fragment (views/player-results-fragment
-                       (conj player-results {:player-id new-player-id})
+                       (reset-ranks (conj player-results {:player-id new-player-id}))
                        (state/get-all-players s))))))
 
 (defn create-and-add-player [request]
@@ -540,7 +590,7 @@
       (let [new-player-id (str (UUID/randomUUID))]
         (state/add-player! s {:id new-player-id :name new-name})
         (htmx-fragment (views/player-results-fragment
-                         (conj player-results {:player-id new-player-id})
+                         (reset-ranks (conj player-results {:player-id new-player-id}))
                          (state/get-all-players s)))))))
 
 (defn remove-player [request]
@@ -548,8 +598,8 @@
         params (:params request)
         player-results (parse-player-results params)
         idx (parse-int (:remove-idx params))
-        new-results (vec (concat (subvec player-results 0 idx)
-                                 (subvec player-results (inc idx))))]
+        new-results (reset-ranks (vec (concat (subvec player-results 0 idx)
+                                             (subvec player-results (inc idx)))))]
     (htmx-fragment (views/player-results-fragment new-results (state/get-all-players s)))))
 
 ;; Data management handlers

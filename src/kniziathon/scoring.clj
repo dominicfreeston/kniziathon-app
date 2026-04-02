@@ -86,11 +86,17 @@
               sorted))))
 
 (defn auto-rank-by-scores [player-results]
-  "Auto-rank players by their game scores (descending)"
+  "Auto-rank players by their game scores (descending), with competition ranking for ties"
   (let [with-scores (filter :game-score player-results)
         without-scores (remove :game-score player-results)
         sorted (sort-by :game-score > with-scores)
-        ranked (map-indexed (fn [idx pr] (assoc pr :rank (inc idx))) sorted)]
+        ranked (first
+                 (reduce (fn [[result prev-score prev-rank pos] pr]
+                           (let [rank (if (= (:game-score pr) prev-score) prev-rank pos)]
+                             [(conj result (assoc pr :rank rank))
+                              (:game-score pr) rank (inc pos)]))
+                         [[] nil 1 1]
+                         sorted))]
     (vec (concat ranked without-scores))))
 
 (defn player-game-details [app-state player-id]
