@@ -297,11 +297,13 @@
         " "
         [:button {:type "submit"} (if editing? "Update Play" "Create Play")]])))
 
+(def ^:private podium-medals {0 "\uD83E\uDD47" 1 "\uD83E\uDD48" 2 "\uD83E\uDD49"})
+
 (defn leaderboard-table [leaderboard-data]
   [:div {:hx-get "/htmx/leaderboard"
          :hx-trigger "every 10s"
          :hx-swap "outerHTML"}
-   [:table
+   [:table {:class "leaderboard"}
     [:thead
      [:tr
       [:th {:class "rank-cell"} "Rank"]
@@ -312,13 +314,19 @@
     [:tbody
      (map-indexed
        (fn [idx player]
-         [:tr
-          [:td {:class "rank-cell"} (inc idx)]
-          [:td [:a {:href (str "/leaderboard/player/" (:player-id player))}
-                (:name player)]]
-          [:td {:class "numeric"} (:total-score player)]
-          [:td {:class "numeric"} (:games-played player)]
-          [:td {:class "numeric"} (:total-plays player)]])
+         (let [rank (inc idx)
+               podium-class (when (< idx 3) (str "podium podium-" rank))]
+           [:tr (when podium-class {:class podium-class})
+            [:td {:class "rank-cell"}
+             (if-let [medal (get podium-medals idx)]
+               [:span {:class "medal"} medal]
+               rank)]
+            [:td {:class "player-name"}
+             [:a {:href (str "/leaderboard/player/" (:player-id player))}
+              (:name player)]]
+            [:td {:class "numeric score"} (:total-score player)]
+            [:td {:class "numeric"} (:games-played player)]
+            [:td {:class "numeric"} (:total-plays player)]]))
        leaderboard-data)]]])
 
 (defn leaderboard [leaderboard-data multi-play?]
