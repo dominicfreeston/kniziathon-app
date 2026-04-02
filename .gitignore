@@ -1,2 +1,6 @@
 .DS_Store
-/.agent-shell/
+.agent-shell/
+.cpcache/
+.lein-failures
+.lein-repl-history
+target/
