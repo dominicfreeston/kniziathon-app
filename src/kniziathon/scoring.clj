@@ -27,14 +27,16 @@
       ;; :full or default
       (int (* (position-points rank num-players) game-weight)))))
 
-(defn player-plays [app-state player-id]
+(defn player-plays
   "Get all plays where this player participated"
+  [app-state player-id]
   (filter #(some (fn [pr] (= (:player-id pr) player-id))
                  (:player-results %))
           (state/get-all-plays app-state)))
 
-(defn play-score-for-player [app-state play player-id]
+(defn play-score-for-player
   "Calculate the score a player got in a specific play"
+  [app-state play player-id]
   (let [player-result (first (filter #(= (:player-id %) player-id)
                                     (:player-results play)))
         game (state/get-game app-state (:game-id play))
@@ -45,8 +47,9 @@
     (when (and player-result game)
       (calculate-tied-play-score rank num-players (:weight game) tie-count tie-mode))))
 
-(defn player-best-scores [app-state player-id]
+(defn player-best-scores
   "Return map of {game-id best-score} for this player"
+  [app-state player-id]
   (let [plays (player-plays app-state player-id)]
     (->> plays
          (group-by :game-id)
@@ -57,8 +60,9 @@
                              (apply max 0))]))
          (into {}))))
 
-(defn player-total-score [app-state player-id]
+(defn player-total-score
   "Sum of best scores per game (standard) or all play scores (multi-play mode)"
+  [app-state player-id]
   (if (state/get-setting app-state :multi-play-scoring)
     (->> (player-plays app-state player-id)
          (map #(play-score-for-player app-state % player-id))
@@ -68,16 +72,19 @@
          vals
          (reduce + 0))))
 
-(defn player-total-plays [app-state player-id]
+(defn player-total-plays
   "Total number of plays this player has participated in"
+  [app-state player-id]
   (count (player-plays app-state player-id)))
 
-(defn player-games-played [app-state player-id]
+(defn player-games-played
   "Count of unique games this player has played"
+  [app-state player-id]
   (count (player-best-scores app-state player-id)))
 
-(defn leaderboard-data [app-state]
+(defn leaderboard-data
   "Return sorted list of players with scores and competition ranks (ties share a rank)"
+  [app-state]
   (let [sorted (->> (state/get-all-players app-state)
                     (map (fn [player]
                            {:player-id (:id player)
@@ -99,8 +106,9 @@
               [[] nil 1 1]
               sorted))))
 
-(defn auto-rank-by-scores [player-results]
+(defn auto-rank-by-scores
   "Auto-rank players by their game scores (descending), with competition ranking for ties"
+  [player-results]
   (let [with-scores (filter :game-score player-results)
         without-scores (remove :game-score player-results)
         sorted (sort-by :game-score > with-scores)
@@ -113,8 +121,9 @@
                          sorted))]
     (vec (concat ranked without-scores))))
 
-(defn player-game-details [app-state player-id]
+(defn player-game-details
   "Return details of all games played by this player with their best scores"
+  [app-state player-id]
   (let [best-scores (player-best-scores app-state player-id)
         plays (player-plays app-state player-id)]
     (->> best-scores
