@@ -2,7 +2,6 @@
   (:require [hiccup.page :refer [html5]]
             [hiccup.form :as form]
             [clojure.string :as str]
-            [kniziathon.state :as state]
             [kniziathon.scoring :as scoring]))
 
 (defn layout [title & content]
@@ -127,15 +126,15 @@
    [:th "Points"]
    [:th {:class "actions"} "Actions"]])
 
-(defn play-row [play]
-  (let [game (state/get-game (:game-id play))
+(defn play-row [play games-map players-map]
+  (let [game (get games-map (:game-id play))
         sorted-results (sort-by :rank (:player-results play))]
     [:tr
      [:td [:a {:href (str "/games/" (:game-id play) "/plays")} (:name game)]
       (str " (" (:weight game) ")")]
      [:td
       (for [pr sorted-results]
-        (let [player (state/get-player (:player-id pr))]
+        (let [player (get players-map (:player-id pr))]
           [:div
            (str (:rank pr) ". ")
            [:a {:href (str "/leaderboard/player/" (:player-id pr))} (:name player)]
@@ -156,7 +155,7 @@
                  :onclick "return confirm('Delete this play? This cannot be undone.')"}
         "Delete"]]]]))
 
-(defn plays-list [plays & [message]]
+(defn plays-list [plays games-map players-map & [message]]
   (layout "Plays"
     (when message [:p {:class "success"} message])
     [:h1 "Plays"]
@@ -165,7 +164,7 @@
      [:thead (play-header)]
      [:tbody
       (for [play (reverse (sort-by :timestamp plays))]
-        (play-row play))]]))
+        (play-row play games-map players-map))]]))
 
 (defn- player-entry-row [i pr players]
   [:div {:class "player-row"
@@ -377,11 +376,11 @@
                                      (str (:name p) " (#" (:rank %) ")"))
                                   others))]]))]])
 
-(defn player-detail [player details players-map multi-play?]
+(defn player-detail [player details players-map multi-play? total-score total-plays]
   (layout (str (:name player) " - Details")
     [:h1 (:name player)]
-    [:p [:strong "Total Score: "] (scoring/player-total-score (:id player))]
-    [:p [:strong "Total Plays: "] (scoring/player-total-plays (:id player))]
+    [:p [:strong "Total Score: "] total-score]
+    [:p [:strong "Total Plays: "] total-plays]
     [:a {:href "/leaderboard"} "← Back to Leaderboard"]
     [:h2 "Game Breakdown"]
     (for [detail details]
@@ -398,6 +397,7 @@
         [:span (str "Best Rank: " (:rank detail))]
         [:span (str (:num-plays detail) " play" (when (not= 1 (:num-plays detail)) "s"))]]
        (game-plays-table player detail players-map)])))
+
 (defn game-detail [game plays players]
   (layout (str (:name game) " - Plays")
     [:h1 (:name game)]

@@ -15,67 +15,72 @@
 (defroutes app-routes
   ;; Home
   (GET "/" [] (response/redirect "/leaderboard"))
-  
+
   ;; Games
-  (GET "/games" [] (handlers/games-list))
-  (GET "/games/merge" [] (handlers/merge-games-form-get))
-  (POST "/games/merge" {params :params} (handlers/merge-games params))
-  (GET "/games/new" [] (handlers/new-game-form))
-  (POST "/games" {params :params} (handlers/create-game params))
-  (GET "/games/:id/plays" [id] (handlers/game-detail id))
-  (GET "/games/:id/edit" [id] (handlers/edit-game-form id))
-  (POST "/games/:id" [id :as {params :params}] (handlers/update-game (assoc params :id id)))
-  (POST "/games/:id/delete" [id] (handlers/delete-game id))
-  
+  (GET "/games" request (handlers/games-list request))
+  (GET "/games/merge" request (handlers/merge-games-form-get request))
+  (POST "/games/merge" request (handlers/merge-games request))
+  (GET "/games/new" request (handlers/new-game-form request))
+  (POST "/games" request (handlers/create-game request))
+  (GET "/games/:id/plays" [id :as request] (handlers/game-detail request id))
+  (GET "/games/:id/edit" [id :as request] (handlers/edit-game-form request id))
+  (POST "/games/:id" [id :as request] (handlers/update-game (assoc-in request [:params :id] id)))
+  (POST "/games/:id/delete" [id :as request] (handlers/delete-game request id))
+
   ;; Players
-  (GET "/players" [] (handlers/players-list))
-  (GET "/players/merge" [] (handlers/merge-players-form-get))
-  (POST "/players/merge" {params :params} (handlers/merge-players params))
-  (GET "/players/new" [] (handlers/new-player-form))
-  (POST "/players" {params :params} (handlers/create-player params))
-  (GET "/players/:id/split" [id] (handlers/split-player-form-get id))
-  (POST "/players/:id/split" [id :as {params :params}] (handlers/split-player id params))
-  (GET "/players/:id/edit" [id] (handlers/edit-player-form id))
-  (POST "/players/:id" [id :as {params :params}] (handlers/update-player (assoc params :id id)))
-  (POST "/players/:id/delete" [id] (handlers/delete-player id))
-  
+  (GET "/players" request (handlers/players-list request))
+  (GET "/players/merge" request (handlers/merge-players-form-get request))
+  (POST "/players/merge" request (handlers/merge-players request))
+  (GET "/players/new" request (handlers/new-player-form request))
+  (POST "/players" request (handlers/create-player request))
+  (GET "/players/:id/split" [id :as request] (handlers/split-player-form-get request id))
+  (POST "/players/:id/split" [id :as request] (handlers/split-player request id))
+  (GET "/players/:id/edit" [id :as request] (handlers/edit-player-form request id))
+  (POST "/players/:id" [id :as request] (handlers/update-player (assoc-in request [:params :id] id)))
+  (POST "/players/:id/delete" [id :as request] (handlers/delete-player request id))
+
   ;; Plays
-  (GET "/plays" [] (handlers/plays-list))
-  (GET "/plays/new" {params :params} (handlers/new-play-form params))
-  (POST "/plays" {params :params} (handlers/create-play params))
-  (GET "/plays/:id/edit" [id :as {params :params}] (handlers/edit-play-form id params))
-  (POST "/plays/:id" [id :as {params :params}] (handlers/update-play (assoc params :id id)))
-  (POST "/plays/:id/delete" [id] (handlers/delete-play id))
-  
+  (GET "/plays" request (handlers/plays-list request))
+  (GET "/plays/new" request (handlers/new-play-form request))
+  (POST "/plays" request (handlers/create-play request))
+  (GET "/plays/:id/edit" [id :as request] (handlers/edit-play-form request id))
+  (POST "/plays/:id" [id :as request] (handlers/update-play (assoc-in request [:params :id] id)))
+  (POST "/plays/:id/delete" [id :as request] (handlers/delete-play request id))
+
   ;; Leaderboard
-  (GET "/leaderboard" [] (handlers/leaderboard))
-  (GET "/leaderboard/player/:id" [id] (handlers/player-detail id))
-  (POST "/settings/toggle-scoring-mode" [] (handlers/toggle-scoring-mode))
+  (GET "/leaderboard" request (handlers/leaderboard request))
+  (GET "/leaderboard/player/:id" [id :as request] (handlers/player-detail request id))
+  (POST "/settings/toggle-scoring-mode" request (handlers/toggle-scoring-mode request))
 
   ;; Data Management
-  (GET "/data" [] (handlers/data-management))
-  (POST "/data/export" [] (handlers/export-data))
-  (POST "/data/import" {params :params} (handlers/import-data params))
-  (POST "/data/import-games-csv" {params :params} (handlers/import-games-csv params))
-  (POST "/data/import-players-csv" {params :params} (handlers/import-players-csv params))
-  (POST "/data/clear" [] (handlers/clear-data))
-  
+  (GET "/data" request (handlers/data-management request))
+  (POST "/data/export" request (handlers/export-data request))
+  (POST "/data/import" request (handlers/import-data request))
+  (POST "/data/import-games-csv" request (handlers/import-games-csv request))
+  (POST "/data/import-players-csv" request (handlers/import-players-csv request))
+  (POST "/data/clear" request (handlers/clear-data request))
+
   ;; htmx routes
-  (GET "/htmx/leaderboard" [] (handlers/leaderboard-fragment))
-  (POST "/htmx/plays/rank-by-score" {params :params} (handlers/auto-rank-by-score params))
-  (POST "/htmx/plays/move-player" {params :params} (handlers/move-player params))
-  (POST "/htmx/plays/add-player" {params :params} (handlers/add-player params))
-  (POST "/htmx/plays/remove-player" {params :params} (handlers/remove-player params))
-  (POST "/htmx/plays/reorder-players" {params :params} (handlers/reorder-players params))
-  (POST "/htmx/plays/create-and-add-player" {params :params} (handlers/create-and-add-player params))
-  
+  (GET "/htmx/leaderboard" request (handlers/leaderboard-fragment request))
+  (POST "/htmx/plays/rank-by-score" request (handlers/auto-rank-by-score request))
+  (POST "/htmx/plays/move-player" request (handlers/move-player request))
+  (POST "/htmx/plays/add-player" request (handlers/add-player request))
+  (POST "/htmx/plays/remove-player" request (handlers/remove-player request))
+  (POST "/htmx/plays/reorder-players" request (handlers/reorder-players request))
+  (POST "/htmx/plays/create-and-add-player" request (handlers/create-and-add-player request))
+
   ;; Static resources
   (GET "/css/pico.min.css" [] (response/resource-response "pico.min.css" {:root "public/css"}))
   (route/resources "/")
   (route/not-found "Not Found"))
 
-(def app
+(defn wrap-state [handler app-state]
+  (fn [request]
+    (handler (assoc request :kniziathon/state app-state))))
+
+(defn create-app [app-state]
   (-> app-routes
+      (wrap-state app-state)
       wrap-keyword-params
       wrap-params
       wrap-multipart-params))
@@ -88,23 +93,23 @@
       (println "Could not open browser:" (.getMessage e)))))
 
 (defn -main [& args]
-  (state/load-state!)
-  (println "Starting Kniziathon Tracker on http://localhost:3000")
-  (let [server (run-jetty app {:port 3000 :join? false})]
-    (open-browser "http://localhost:3000")
-    (.join server)))
+  (let [app-state (state/create-state state/default-data-file)
+        app (create-app app-state)]
+    (println "Starting Kniziathon Tracker on http://localhost:3000")
+    (let [server (run-jetty app {:port 3000 :join? false})]
+      (open-browser "http://localhost:3000")
+      (.join server))))
 
 (comment
 
-  (do 
+  (do
     (require '[ring.middleware.reload :refer [wrap-reload]])
-    (def dev-app (wrap-reload #'app))
+    (def dev-state (state/create-state state/default-data-file))
+    (def dev-app (wrap-reload #(create-app dev-state)))
     (def server (atom nil)))
 
-  (state/load-state!)
-
   (.stop @server)
-  
+
   (reset! server
           (run-jetty dev-app {:port 3000
                               :join? false}))

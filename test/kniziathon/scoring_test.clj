@@ -1,14 +1,7 @@
 (ns kniziathon.scoring-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require [clojure.test :refer [deftest is testing]]
             [kniziathon.scoring :as scoring]
             [kniziathon.state :as state]))
-
-(defn reset-state [f]
-  (reset! state/app-state {:games {} :players {} :plays {}})
-  (f)
-  (reset! state/app-state {:games {} :players {} :plays {}}))
-
-(use-fixtures :each reset-state)
 
 ;; --- position-points ---
 
@@ -71,7 +64,8 @@
 ;; --- state-dependent scoring ---
 
 (deftest player-best-scores-test
-  (let [g1 {:id "g1" :name "Chess" :weight 2}
+  (let [s (state/create-state)
+        g1 {:id "g1" :name "Chess" :weight 2}
         p1 "player-1"
         play1 {:id "play1" :game-id "g1" :timestamp "2024-01-01"
                :player-results [{:player-id p1 :rank 1}
@@ -79,66 +73,68 @@
         play2 {:id "play2" :game-id "g1" :timestamp "2024-01-02"
                :player-results [{:player-id p1 :rank 2}
                                  {:player-id "player-2" :rank 1}]}]
-    (state/add-game! g1)
-    (state/add-play! play1)
-    (state/add-play! play2)
+    (state/add-game! s g1)
+    (state/add-play! s play1)
+    (state/add-play! s play2)
     (testing "best score is maximum across plays for the game"
       ;; rank 1 in 2-player with weight 2: 4*2=8; rank 2: 1*2=2
-      (let [best (scoring/player-best-scores p1)]
+      (let [best (scoring/player-best-scores s p1)]
         (is (= {"g1" 8} best))))
     (testing "player with no plays has empty best scores"
-      (is (= {} (scoring/player-best-scores "nobody"))))))
+      (is (= {} (scoring/player-best-scores s "nobody"))))))
 
 (deftest player-total-score-test
-  (let [g1 {:id "g1" :name "Chess" :weight 1}
+  (let [s (state/create-state)
+        g1 {:id "g1" :name "Chess" :weight 1}
         g2 {:id "g2" :name "Go" :weight 1}
         p1 "player-1"]
-    (state/add-game! g1)
-    (state/add-game! g2)
-    (state/add-play! {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+    (state/add-game! s g1)
+    (state/add-game! s g2)
+    (state/add-play! s {:id "play1" :game-id "g1" :timestamp "2024-01-01"
                       :player-results [{:player-id p1 :rank 1}
                                        {:player-id "p2" :rank 2}]})
-    (state/add-play! {:id "play2" :game-id "g2" :timestamp "2024-01-01"
+    (state/add-play! s {:id "play2" :game-id "g2" :timestamp "2024-01-01"
                       :player-results [{:player-id p1 :rank 2}
                                        {:player-id "p2" :rank 1}]})
     (testing "total score sums best scores across all games"
       ;; g1: rank 1 in 2-player, weight 1 => 4; g2: rank 2 in 2-player, weight 1 => 1
-      (is (= 5 (scoring/player-total-score p1))))
+      (is (= 5 (scoring/player-total-score s p1))))
     (testing "player with no plays scores 0"
-      (is (= 0 (scoring/player-total-score "nobody"))))
+      (is (= 0 (scoring/player-total-score s "nobody"))))
     (testing "multi-play mode sums all play scores instead of best per game"
       ;; Add a second play for g1 where p1 gets rank 2 (score 1)
       ;; Standard: best per game => g1:4 + g2:1 = 5
       ;; Multi-play: all plays => g1 rank1:4 + g1 rank2:1 + g2 rank2:1 = 6
-      (state/add-play! {:id "play3" :game-id "g1" :timestamp "2024-01-02"
+      (state/add-play! s {:id "play3" :game-id "g1" :timestamp "2024-01-02"
                         :player-results [{:player-id p1 :rank 2}
                                          {:player-id "p2" :rank 1}]})
-      (is (= 5 (scoring/player-total-score p1)) "standard mode unchanged")
-      (state/toggle-setting! :multi-play-scoring)
-      (is (= 6 (scoring/player-total-score p1)) "multi-play mode sums all plays")
-      (state/toggle-setting! :multi-play-scoring))))
+      (is (= 5 (scoring/player-total-score s p1)) "standard mode unchanged")
+      (state/toggle-setting! s :multi-play-scoring)
+      (is (= 6 (scoring/player-total-score s p1)) "multi-play mode sums all plays")
+      (state/toggle-setting! s :multi-play-scoring))))
 
 (deftest leaderboard-data-test
-  (let [g1 {:id "g1" :name "Chess" :weight 1}
+  (let [s (state/create-state)
+        g1 {:id "g1" :name "Chess" :weight 1}
         p1 {:id "p1" :name "Alice"}
         p2 {:id "p2" :name "Bob"}]
-    (state/add-game! g1)
-    (state/add-player! p1)
-    (state/add-player! p2)
-    (state/add-play! {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+    (state/add-game! s g1)
+    (state/add-player! s p1)
+    (state/add-player! s p2)
+    (state/add-play! s {:id "play1" :game-id "g1" :timestamp "2024-01-01"
                       :player-results [{:player-id "p1" :rank 1}
                                        {:player-id "p2" :rank 2}]})
-    (state/add-player! {:id "p3" :name "Carol"})
+    (state/add-player! s {:id "p3" :name "Carol"})
     (testing "leaderboard excludes players with no plays"
-      (let [board (scoring/leaderboard-data)]
+      (let [board (scoring/leaderboard-data s)]
         (is (= 2 (count board)))
         (is (not (some #(= "p3" (:player-id %)) board)))))
     (testing "leaderboard is sorted by total score descending"
-      (let [board (scoring/leaderboard-data)]
+      (let [board (scoring/leaderboard-data s)]
         (is (= "p1" (:player-id (first board))))
         (is (= "p2" (:player-id (second board))))))
     (testing "leaderboard entries have expected keys"
-      (let [entry (first (scoring/leaderboard-data))]
+      (let [entry (first (scoring/leaderboard-data s))]
         (is (contains? entry :player-id))
         (is (contains? entry :name))
         (is (contains? entry :total-score))
