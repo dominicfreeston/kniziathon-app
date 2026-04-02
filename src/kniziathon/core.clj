@@ -8,6 +8,8 @@
             [ring.util.response :as response]
             [kniziathon.state :as state]
             [kniziathon.handlers :as handlers])
+  (:import [java.awt Desktop]
+           [java.net URI])
   (:gen-class))
 
 (defroutes app-routes
@@ -78,10 +80,19 @@
       wrap-params
       wrap-multipart-params))
 
+(defn open-browser [url]
+  (try
+    (when (Desktop/isDesktopSupported)
+      (.browse (Desktop/getDesktop) (URI. url)))
+    (catch Exception e
+      (println "Could not open browser:" (.getMessage e)))))
+
 (defn -main [& args]
   (state/load-state!)
   (println "Starting Kniziathon Tracker on http://localhost:3000")
-  (run-jetty app {:port 3000 :join? true}))
+  (let [server (run-jetty app {:port 3000 :join? false})]
+    (open-browser "http://localhost:3000")
+    (.join server)))
 
 (comment
 

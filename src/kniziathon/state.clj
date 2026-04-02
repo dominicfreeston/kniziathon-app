@@ -7,18 +7,20 @@
          :players {}
          :plays {}}))
 
+(def data-file
+  (io/file (System/getProperty "user.home") ".kniziathon" "kniziathon.edn"))
+
 (defn save-state! []
-  (io/make-parents "data/kniziathon.edn")
-  (spit "data/kniziathon.edn" (pr-str @app-state)))
+  (io/make-parents data-file)
+  (spit data-file (pr-str @app-state)))
 
 (defn load-state! []
-  (let [file (io/file "data/kniziathon.edn")]
-    (when (.exists file)
-      (try
-        (reset! app-state (edn/read-string (slurp file)))
-        (println "Loaded state from data/kniziathon.edn")
-        (catch Exception e
-          (println "Error loading state:" (.getMessage e)))))))
+  (when (.exists data-file)
+    (try
+      (reset! app-state (edn/read-string (slurp data-file)))
+      (println "Loaded state from" (str data-file))
+      (catch Exception e
+        (println "Error loading state:" (.getMessage e))))))
 
 ;; Auto-save on state changes
 (add-watch app-state :persistence

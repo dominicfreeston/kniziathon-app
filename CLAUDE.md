@@ -6,13 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Run the application (starts server at http://localhost:3000)
-lein run
+clojure -M:run
 
 # Run tests
-lein test
+clojure -M:test
 
 # Run a single test namespace
-lein test kniziathon.scoring-test
+clojure -M:test --namespace kniziathon.scoring-test
+
+# Build uberjar
+clojure -T:build uber
 
 # Attempt to auto-fix unbalanced parenthesis
 parmezan --file path/to/file.clj --write
@@ -20,7 +23,7 @@ parmezan --file path/to/file.clj --write
 
 ## Testing
 
-Always run `lein test` after making changes. New functionality must be accompanied by tests.
+Always run `clojure -M:test` after making changes. New functionality must be accompanied by tests.
 
 Test namespaces mirror source namespaces:
 - `kniziathon.scoring-test` — pure scoring logic

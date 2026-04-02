@@ -4,15 +4,14 @@ A server-side rendered web application to track scores and rankings for a Knizia
 
 ## Prerequisites
 
-- Java 8 or higher
-- Leiningen (Clojure build tool)
+- [Clojure](https://clojure.org/guides/install_clojure)
 
 ## Running the Application
 
 From the project root directory:
 
 ```bash
-lein run
+clojure -M:run
 ```
 
 The server will start on http://localhost:3000
