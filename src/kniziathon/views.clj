@@ -10,7 +10,7 @@
      [:meta {:charset "utf-8"}]
      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
      [:title title]
-     [:link {:rel "stylesheet" :href "/css/pico.min.css"}]
+     [:link {:rel "stylesheet" :href "/css/fonts.css"}]
      [:link {:rel "stylesheet" :href "/css/style.css"}]
      [:script {:src "/js/htmx.min.js"}]
      [:script {:src "/js/Sortable.min.js"}]]

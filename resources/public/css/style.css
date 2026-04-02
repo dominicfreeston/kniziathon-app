@@ -1,81 +1,360 @@
+/* Kniziathon Styles */
+
+:root {
+  --primary: #5347ad;
+  --primary-hover: #5a4bd1;
+  --primary-light: #f0eefa;
+  --secondary: #636e72;
+  --secondary-hover: #4a5458;
+  --accent: #e07a3a;
+  --accent-light: #fef3eb;
+  --danger: #c0392b;
+  --danger-hover: #962d23;
+  --text: #2d3436;
+  --text-muted: #636e72;
+  --bg: #faf9f7;
+  --bg-card: #ffffff;
+  --border: #e0ddd8;
+  --border-light: #edeae5;
+  --spacing: 1rem;
+  --border-radius: 0.5rem;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  --transition: 0.2s ease;
+}
+
+/* === Reset & Base === */
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+  color: var(--text);
+  background: var(--bg);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Nunito', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-weight: 700;
+}
+
+h1, h2, h3, h4 { margin-top: 1.5rem; margin-bottom: 1rem; }
+h1 { font-size: 2rem; color: var(--text); }
+h2 { font-size: 1.5rem; color: var(--text); }
+
+/* === Layout === */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing);
+}
+
+main { padding-bottom: 2rem; }
+
+/* === Navigation === */
+
+nav {
+  background: var(--primary);
+  padding: 0;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow);
+}
+
+nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 0;
+  align-items: center;
+}
+
+nav li { margin: 0; }
+
+nav a {
+  text-decoration: none;
+  color: rgba(255,255,255,0.8);
+  padding: 0.875rem 1.25rem;
+  display: block;
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background var(--transition), color var(--transition);
+  border-radius: 0;
+}
+
+nav a:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.12);
+  text-decoration: none;
+}
+
+nav li:first-child a {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  padding-right: 2rem;
+}
+
+/* === Links === */
+
+a { color: var(--primary); text-decoration: none; transition: color var(--transition); }
+a:hover { color: var(--primary-hover); text-decoration: underline; }
+a[role="button"] { color: white; }
+a[role="button"]:hover { color: white; text-decoration: none; }
+
+/* === Buttons === */
+
+button, [role="button"], input[type="submit"] {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+  transition: background var(--transition), box-shadow var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+button:hover, [role="button"]:hover, input[type="submit"]:hover {
+  background: var(--primary-hover);
+  color: white;
+  box-shadow: var(--shadow);
+  text-decoration: none;
+}
+
+button.secondary, [role="button"].secondary {
+  background: var(--secondary);
+}
+button.secondary:hover, [role="button"].secondary:hover {
+  background: var(--secondary-hover);
+}
+
+button.delete-btn { background: var(--danger); }
+button.delete-btn:hover { background: var(--danger-hover); }
+
+/* === Forms === */
+
+form { max-width: 600px; }
+
+label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="file"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: var(--spacing);
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 1rem;
+  color: var(--text);
+  background: var(--bg-card);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+input.small-input { width: auto; max-width: 100px; }
+
+fieldset {
+  border: 1px solid var(--border);
+  padding: var(--spacing);
+  margin-bottom: var(--spacing);
+  border-radius: var(--border-radius);
+}
+
+legend {
+  padding: 0 0.5rem;
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-weight: 700;
+}
+
+/* === Tables === */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  margin: var(--spacing) 0;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+th, td {
+  padding: 0.875rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-light);
+}
+
+th {
+  background: var(--primary-light);
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary);
+}
+
+th.numeric { text-align: right; }
+
+tr:last-child td { border-bottom: none; }
+
+tbody tr { transition: background var(--transition); }
+tbody tr:hover { background: var(--primary-light); }
+
+td.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* === Action buttons in tables === */
+
+.actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.actions a,
+.actions button {
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  text-decoration: none;
+  border-radius: var(--border-radius);
+  display: inline-block;
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+  line-height: 1;
+  vertical-align: middle;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.actions a {
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.actions a:hover {
+  background-color: var(--primary);
+  color: white;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.actions button {
+  margin-left: 0.5rem;
+  border: 1px solid transparent;
+}
+
+.actions button:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+/* === Player entry rows (play forms) === */
+
+.player-row {
+  margin-bottom: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  background: var(--bg-card);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.player-row:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.player-row label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.player-row select,
+.player-row input[type='number'] {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+/* === Flash messages === */
+
+.error { color: var(--danger); margin-bottom: 1rem; }
+
+.success {
+  color: #1a7f37;
+  background: #dafbe1;
+  padding: 0.75rem 1rem;
+  border-radius: var(--border-radius);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+/* === Leaderboard === */
+
+.rank-cell {
+  text-align: center;
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+/* === Details/accordion === */
+
+details {
+  border: 1px solid var(--border);
+  border-radius: var(--border-radius);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition);
+}
+
+details:hover { box-shadow: var(--shadow); }
+details[open] { box-shadow: var(--shadow); }
+
+details summary {
+  cursor: pointer;
+  font-family: 'Nunito', system-ui, sans-serif;
+  transition: color var(--transition);
+}
+
+details summary:hover { color: var(--primary); }
+
+/* === Fullscreen mode === */
+
 .fullscreen-mode nav { display: none; }
 .fullscreen-mode main { margin-top: 0; }
 .fullscreen-mode .scoring-mode-controls { display: none !important; }
-table { 
-    width: 100%;
-    border-collapse: collapse;
-}
-thead th {
-    background-color: #f1f3f5;
-    padding: 1rem 0.75rem;
-    text-align: left;
-    font-weight: 600;
-    border-bottom: 2px solid #dee2e6;
-}
-thead th.numeric {
-    text-align: right;
-}
-tbody td {
-    padding: 0.875rem 0.75rem;
-    border-bottom: 1px solid #e9ecef;
-}
-tbody tr:nth-child(even) {
-    background-color: #f8f9fa;
-}
-td.numeric {
-    text-align: right;
-}
-.actions { 
-    white-space: nowrap;
-    text-align: right;
-}
-.actions a,
-.actions button {
-    font-size: 0.9rem;
-    padding: 0.5rem 0.85rem;
-    text-decoration: none;
-    border-radius: 4px;
-    display: inline-block;
-    transition: all 0.15s ease;
-    line-height: 1;
-    vertical-align: middle;
-    box-sizing: border-box;
-    font-family: inherit;
-    cursor: pointer;
-}
-.actions a {
-    color: #1971c2;
-    border: 1px solid #1971c2;
-    background-color: transparent;
-}
-.actions a:hover {
-    background-color: #1971c2;
-    color: white;
-}
-.actions button {
-    margin-left: 0.5rem;
-    border: 1px solid transparent;
-}
-.player-row { 
-    margin-bottom: 0.5rem; 
-    padding: 0.75rem; 
-    border: 1px solid #dee2e6; 
-    border-radius: 4px; 
-    background: #fff;
-}
-.player-row label {
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-.player-row select,
-.player-row input[type='number'] {
-    width: 100%;
-    margin-bottom: 0;
-}
-.error { color: red; margin-bottom: 1rem; }
-.success { color: green; margin-bottom: 1rem; }
-.rank-cell { text-align: center; font-weight: bold; }
-.delete-btn { background-color: #d32f2f; }
-.small-input { max-width: 100px; }

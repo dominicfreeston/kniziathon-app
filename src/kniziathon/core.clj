@@ -70,7 +70,6 @@
   (POST "/htmx/plays/create-and-add-player" request (handlers/create-and-add-player request))
 
   ;; Static resources
-  (GET "/css/pico.min.css" [] (response/resource-response "pico.min.css" {:root "public/css"}))
   (route/resources "/")
   (route/not-found "Not Found"))
 
