@@ -297,7 +297,7 @@
         " "
         [:button {:type "submit"} (if editing? "Update Play" "Create Play")]])))
 
-(def ^:private podium-medals {0 "\uD83E\uDD47" 1 "\uD83E\uDD48" 2 "\uD83E\uDD49"})
+(def ^:private podium-medals {1 "\uD83E\uDD47" 2 "\uD83E\uDD48" 3 "\uD83E\uDD49"})
 
 (defn leaderboard-table [leaderboard-data]
   [:div {:hx-get "/htmx/leaderboard"
@@ -312,22 +312,20 @@
       [:th {:class "numeric"} "Games Played"]
       [:th {:class "numeric"} "Total Plays"]]]
     [:tbody
-     (map-indexed
-       (fn [idx player]
-         (let [rank (inc idx)
-               podium-class (when (< idx 3) (str "podium podium-" rank))]
-           [:tr (when podium-class {:class podium-class})
-            [:td {:class "rank-cell"}
-             (if-let [medal (get podium-medals idx)]
-               [:span {:class "medal"} medal]
-               rank)]
-            [:td {:class "player-name"}
-             [:a {:href (str "/leaderboard/player/" (:player-id player))}
-              (:name player)]]
-            [:td {:class "numeric score"} (:total-score player)]
-            [:td {:class "numeric"} (:games-played player)]
-            [:td {:class "numeric"} (:total-plays player)]]))
-       leaderboard-data)]]])
+     (for [player leaderboard-data
+           :let [rank (:rank player)
+                 podium-class (when (<= rank 3) (str "podium podium-" rank))]]
+       [:tr (when podium-class {:class podium-class})
+        [:td {:class "rank-cell"}
+         (if-let [medal (get podium-medals rank)]
+           [:span {:class "medal"} medal]
+           rank)]
+        [:td {:class "player-name"}
+         [:a {:href (str "/leaderboard/player/" (:player-id player))}
+          (:name player)]]
+        [:td {:class "numeric score"} (:total-score player)]
+        [:td {:class "numeric"} (:games-played player)]
+        [:td {:class "numeric"} (:total-plays player)]])]]])
 
 (defn leaderboard [leaderboard-data multi-play?]
   (layout "Leaderboard"

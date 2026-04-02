@@ -139,4 +139,33 @@
         (is (contains? entry :name))
         (is (contains? entry :total-score))
         (is (contains? entry :games-played))
-        (is (contains? entry :total-plays))))))
+        (is (contains? entry :total-plays))
+        (is (contains? entry :rank))))))
+
+(deftest leaderboard-tied-ranks
+  (let [s (state/create-state)
+        g1 {:id "g1" :name "Chess" :weight 1}
+        p1 {:id "p1" :name "Alice"}
+        p2 {:id "p2" :name "Bob"}
+        p3 {:id "p3" :name "Carol"}]
+    (state/add-game! s g1)
+    (state/add-player! s p1)
+    (state/add-player! s p2)
+    (state/add-player! s p3)
+    ;; Alice and Bob both win a 2-player game (weight 1) => 4 pts each
+    ;; Carol loses both => 1 pt
+    (state/add-play! s {:id "play1" :game-id "g1" :timestamp "2024-01-01"
+                        :player-results [{:player-id "p1" :rank 1}
+                                         {:player-id "p3" :rank 2}]})
+    (state/add-play! s {:id "play2" :game-id "g1" :timestamp "2024-01-02"
+                        :player-results [{:player-id "p2" :rank 1}
+                                         {:player-id "p3" :rank 2}]})
+    (let [board (scoring/leaderboard-data s)
+          ranks (mapv :rank board)]
+      (testing "tied players share the same rank"
+        (is (= 1 (:rank (first board))))
+        (is (= 1 (:rank (second board)))))
+      (testing "next rank skips to correct position"
+        (is (= 3 (:rank (nth board 2)))))
+      (testing "all three players present"
+        (is (= 3 (count board)))))))

@@ -63,16 +63,27 @@
   (count (player-best-scores app-state player-id)))
 
 (defn leaderboard-data [app-state]
-  "Return sorted list of players with scores"
-  (->> (state/get-all-players app-state)
-       (map (fn [player]
-              {:player-id (:id player)
-               :name (:name player)
-               :total-score (player-total-score app-state (:id player))
-               :games-played (player-games-played app-state (:id player))
-               :total-plays (player-total-plays app-state (:id player))}))
-       (filter #(pos? (:total-plays %)))
-       (sort-by :total-score >)))
+  "Return sorted list of players with scores and competition ranks (ties share a rank)"
+  (let [sorted (->> (state/get-all-players app-state)
+                    (map (fn [player]
+                           {:player-id (:id player)
+                            :name (:name player)
+                            :total-score (player-total-score app-state (:id player))
+                            :games-played (player-games-played app-state (:id player))
+                            :total-plays (player-total-plays app-state (:id player))}))
+                    (filter #(pos? (:total-plays %)))
+                    (sort-by :total-score >))]
+    (first
+      (reduce (fn [[result prev-score prev-rank pos] entry]
+                (let [rank (if (= (:total-score entry) prev-score)
+                             prev-rank
+                             pos)]
+                  [(conj result (assoc entry :rank rank))
+                   (:total-score entry)
+                   rank
+                   (inc pos)]))
+              [[] nil 1 1]
+              sorted))))
 
 (defn auto-rank-by-scores [player-results]
   "Auto-rank players by their game scores (descending)"
