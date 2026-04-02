@@ -390,6 +390,46 @@
       (is (re-find #"player-1-rank.*value=\"1\"" (:body resp)))
       (is (re-find #"player-2-rank.*value=\"3\"" (:body resp))))))
 
+;; --- tie scoring mode setting ---
+
+(deftest set-tie-scoring-mode-test
+  (testing "POST /settings/tie-scoring-mode changes the setting and redirects"
+    (is (nil? (state/get-setting *test-state* :tie-scoring-mode)) "starts nil (defaults to full)")
+    (let [resp (*test-app* (-> (mock/request :post "/settings/tie-scoring-mode")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "mode=average")))]
+      (is (= 302 (:status resp)))
+      (is (= :average (state/get-setting *test-state* :tie-scoring-mode))))
+    (let [resp (*test-app* (-> (mock/request :post "/settings/tie-scoring-mode")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "mode=lower")))]
+      (is (= 302 (:status resp)))
+      (is (= :lower (state/get-setting *test-state* :tie-scoring-mode))))
+    (let [resp (*test-app* (-> (mock/request :post "/settings/tie-scoring-mode")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "mode=full")))]
+      (is (= 302 (:status resp)))
+      (is (= :full (state/get-setting *test-state* :tie-scoring-mode)))))
+  (testing "invalid mode is ignored"
+    (state/set-setting! *test-state* :tie-scoring-mode :full)
+    (let [resp (*test-app* (-> (mock/request :post "/settings/tie-scoring-mode")
+                        (mock/content-type "application/x-www-form-urlencoded")
+                        (mock/body "mode=bogus")))]
+      (is (= 302 (:status resp)))
+      (is (= :full (state/get-setting *test-state* :tie-scoring-mode))))))
+
+(deftest leaderboard-shows-tie-mode
+  (testing "leaderboard page shows current tie scoring mode"
+    (let [resp (*test-app* (mock/request :get "/leaderboard"))]
+      (is (= 200 (:status resp)))
+      (is (str/includes? (:body resp) "Full (top rank points)")))
+    (state/set-setting! *test-state* :tie-scoring-mode :average)
+    (let [resp (*test-app* (mock/request :get "/leaderboard"))]
+      (is (str/includes? (:body resp) "Average (round up)")))
+    (state/set-setting! *test-state* :tie-scoring-mode :lower)
+    (let [resp (*test-app* (mock/request :get "/leaderboard"))]
+      (is (str/includes? (:body resp) "Lower (bottom rank points)")))))
+
 (deftest player-detail-multi-play-mode
   (testing "GET /leaderboard/player/:id returns 200 in multi-play mode"
     (state/add-game! *test-state* {:id "g1" :name "Chess" :weight 2})

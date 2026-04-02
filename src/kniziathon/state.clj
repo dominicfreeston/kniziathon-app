@@ -82,6 +82,9 @@
 (defn toggle-setting! [state k]
   (swap! state update-in [:settings k] not))
 
+(defn set-setting! [state k v]
+  (swap! state assoc-in [:settings k] v))
+
 (defn clear-all-data! [state]
   (reset! state {:games {} :players {} :plays {}}))
 

@@ -126,9 +126,11 @@
    [:th "Points"]
    [:th {:class "actions"} "Actions"]])
 
-(defn play-row [play games-map players-map]
+(defn play-row [play games-map players-map tie-mode]
   (let [game (get games-map (:game-id play))
-        sorted-results (sort-by :rank (:player-results play))]
+        sorted-results (sort-by :rank (:player-results play))
+        all-results (:player-results play)
+        player-count (count all-results)]
     [:tr
      [:td [:a {:href (str "/games/" (:game-id play) "/plays")} (:name game)]
       (str " (" (:weight game) ")")]
@@ -141,9 +143,9 @@
            (when (:game-score pr) (str " (" (:game-score pr) ")"))]))]
      [:td
       (for [{:keys [rank]} sorted-results
-            :let [player-count (count (:player-results play))]]
+            :let [tie-count (count (filter #(= (:rank %) rank) all-results))]]
         [:div
-         (str (scoring/calculate-play-score rank player-count (:weight game)) " pts")])]
+         (str (scoring/calculate-tied-play-score rank player-count (:weight game) tie-count tie-mode) " pts")])]
      [:td {:class "actions"}
       [:a {:href (str "/plays/" (:id play) "/edit")} "Edit"]
       " "
@@ -155,16 +157,17 @@
                  :onclick "return confirm('Delete this play? This cannot be undone.')"}
         "Delete"]]]]))
 
-(defn plays-list [plays games-map players-map & [message]]
-  (layout "Plays"
-    (when message [:p {:class "success"} message])
-    [:h1 "Plays"]
-    [:a {:href "/plays/new" :role "button"} "Add New Play"]
-    [:table
-     [:thead (play-header)]
-     [:tbody
-      (for [play (reverse (sort-by :timestamp plays))]
-        (play-row play games-map players-map))]]))
+(defn plays-list [plays games-map players-map & [message tie-mode]]
+  (let [tie-mode (or tie-mode :full)]
+    (layout "Plays"
+      (when message [:p {:class "success"} message])
+      [:h1 "Plays"]
+      [:a {:href "/plays/new" :role "button"} "Add New Play"]
+      [:table
+       [:thead (play-header)]
+       [:tbody
+        (for [play (reverse (sort-by :timestamp plays))]
+          (play-row play games-map players-map tie-mode))]])))
 
 (defn- player-entry-row [i pr players]
   (let [rank (or (:rank pr) (inc i))]
@@ -345,7 +348,12 @@
         [:td {:class "numeric"} (:games-played player)]
         [:td {:class "numeric"} (:total-plays player)]])]]])
 
-(defn leaderboard [leaderboard-data multi-play?]
+(def ^:private tie-mode-labels
+  {:full "Full (top rank points)"
+   :average "Average (round up)"
+   :lower "Lower (bottom rank points)"})
+
+(defn leaderboard [leaderboard-data multi-play? tie-mode]
   (layout "Leaderboard"
     [:h1 "Kniziathon Leaderboard"]
     [:div {:class "scoring-mode-controls"
@@ -355,7 +363,14 @@
       [:strong (if multi-play? "Multi-play (all plays count)" "Standard (best per game)")]]
      [:form {:method "post" :action "/settings/toggle-scoring-mode" :style "margin: 0;"}
       [:button {:type "submit" :class "secondary" :style "padding: 0.25rem 0.75rem; font-size: 0.85rem;"}
-       (if multi-play? "Switch to Standard" "Switch to Multi-play")]]]
+       (if multi-play? "Switch to Standard" "Switch to Multi-play")]]
+     [:span {:style "color: #666;"} "Ties: " [:strong (get tie-mode-labels tie-mode)]]
+     [:form {:method "post" :action "/settings/tie-scoring-mode" :style "margin: 0; display: flex; gap: 0.25rem;"}
+      (for [[mode label] [[:full "Full"] [:average "Avg"] [:lower "Lower"]]
+            :when (not= mode tie-mode)]
+        [:button {:type "submit" :name "mode" :value (name mode)
+                  :class "secondary" :style "padding: 0.25rem 0.75rem; font-size: 0.85rem;"}
+         label])]]
     [:div
      [:button {:id "fullscreen-btn" :onclick "enterFullscreen()"}
       "Enter Fullscreen"]
@@ -377,7 +392,7 @@
      "]]
     (leaderboard-table leaderboard-data)))
 
-(defn- game-plays-table [player detail players-map]
+(defn- game-plays-table [player detail players-map tie-mode]
   [:table {:style "margin-top: 0.5rem; width: 100%;"}
    [:thead
     [:tr
@@ -390,7 +405,9 @@
     (for [play (:plays detail)]
       (let [pr (first (filter #(= (:player-id %) (:id player)) (:player-results play)))
             others (sort-by :rank (remove #(= (:player-id %) (:id player)) (:player-results play)))
-            pts (scoring/calculate-play-score (:rank pr) (count (:player-results play)) (:weight detail))]
+            all-results (:player-results play)
+            tie-count (count (filter #(= (:rank %) (:rank pr)) all-results))
+            pts (scoring/calculate-tied-play-score (:rank pr) (count all-results) (:weight detail) tie-count tie-mode)]
         [:tr
          [:td (:timestamp play)]
          [:td {:class "numeric"} (:rank pr)]
@@ -400,7 +417,7 @@
                                      (str (:name p) " (#" (:rank %) ")"))
                                   others))]]))]])
 
-(defn player-detail [player details players-map multi-play? total-score total-plays]
+(defn player-detail [player details players-map multi-play? total-score total-plays tie-mode]
   (layout (str (:name player) " - Details")
     [:h1 (:name player)]
     [:p [:strong "Total Score: "] total-score]
@@ -420,7 +437,7 @@
                  (str "Best Points: " (:best-score detail) " pts"))]
         [:span (str "Best Rank: " (:rank detail))]
         [:span (str (:num-plays detail) " play" (when (not= 1 (:num-plays detail)) "s"))]]
-       (game-plays-table player detail players-map)])))
+       (game-plays-table player detail players-map tie-mode)])))
 
 (defn game-detail [game plays players]
   (layout (str (:name game) " - Plays")

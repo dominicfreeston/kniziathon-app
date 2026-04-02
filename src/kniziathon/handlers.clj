@@ -414,9 +414,10 @@
 (defn plays-list [request]
   (let [s (get-state request)
         games-map (into {} (map (fn [g] [(:id g) g]) (state/get-all-games s)))
-        players-map (into {} (map (fn [p] [(:id p) p]) (state/get-all-players s)))]
+        players-map (into {} (map (fn [p] [(:id p) p]) (state/get-all-players s)))
+        tie-mode (or (state/get-setting s :tie-scoring-mode) :full)]
     (response/response
-      (views/plays-list (state/get-all-plays s) games-map players-map))))
+      (views/plays-list (state/get-all-plays s) games-map players-map nil tie-mode))))
 
 (defn new-play-form [request]
   (let [s (get-state request)
@@ -494,11 +495,19 @@
 (defn leaderboard [request]
   (let [s (get-state request)]
     (response/response
-      (views/leaderboard (scoring/leaderboard-data s) (state/get-setting s :multi-play-scoring)))))
+      (views/leaderboard (scoring/leaderboard-data s)
+                         (state/get-setting s :multi-play-scoring)
+                         (or (state/get-setting s :tie-scoring-mode) :full)))))
 
 (defn toggle-scoring-mode [request]
   (state/toggle-setting! (get-state request) :multi-play-scoring)
   (response/redirect "/leaderboard"))
+
+(defn set-tie-scoring-mode [request]
+  (let [mode (keyword (get-in request [:params :mode]))]
+    (when (#{:full :average :lower} mode)
+      (state/set-setting! (get-state request) :tie-scoring-mode mode))
+    (response/redirect "/leaderboard")))
 
 (defn leaderboard-fragment [request]
   (let [s (get-state request)]
@@ -516,7 +525,8 @@
                               players-map
                               (state/get-setting s :multi-play-scoring)
                               (scoring/player-total-score s id)
-                              (scoring/player-total-plays s id))))
+                              (scoring/player-total-plays s id)
+                              (or (state/get-setting s :tie-scoring-mode) :full))))
       (response/not-found "Player not found"))))
 
 (defn- htmx-fragment [hiccup-data]

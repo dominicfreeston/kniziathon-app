@@ -11,8 +11,21 @@
 (defn position-points [rank num-players]
   (get-in position-points-table [num-players rank] 0))
 
-(defn calculate-play-score [rank num-players game-weight]
-  (int (* (position-points rank num-players) game-weight)))
+(defn calculate-tied-play-score
+  "Calculate score for a player in a tie group.
+   tie-count: how many players share this rank.
+   tie-mode: :full (default), :average, or :lower."
+  [rank num-players game-weight tie-count tie-mode]
+  (if (= tie-count 1)
+    (int (* (position-points rank num-players) game-weight))
+    (case tie-mode
+      :average (int (Math/ceil (/ (* game-weight
+                                     (reduce + (map #(position-points % num-players)
+                                                    (range rank (+ rank tie-count)))))
+                                  tie-count)))
+      :lower   (int (* (position-points (+ rank tie-count -1) num-players) game-weight))
+      ;; :full or default
+      (int (* (position-points rank num-players) game-weight)))))
 
 (defn player-plays [app-state player-id]
   "Get all plays where this player participated"
@@ -25,11 +38,12 @@
   (let [player-result (first (filter #(= (:player-id %) player-id)
                                     (:player-results play)))
         game (state/get-game app-state (:game-id play))
-        num-players (count (:player-results play))]
+        num-players (count (:player-results play))
+        rank (:rank player-result)
+        tie-count (count (filter #(= (:rank %) rank) (:player-results play)))
+        tie-mode (or (state/get-setting app-state :tie-scoring-mode) :full)]
     (when (and player-result game)
-      (calculate-play-score (:rank player-result)
-                          num-players
-                          (:weight game)))))
+      (calculate-tied-play-score rank num-players (:weight game) tie-count tie-mode))))
 
 (defn player-best-scores [app-state player-id]
   "Return map of {game-id best-score} for this player"
