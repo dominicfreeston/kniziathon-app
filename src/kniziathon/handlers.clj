@@ -24,9 +24,17 @@
 
 ;; Games handlers
 (defn games-list [request]
-  (let [s (get-state request)]
+  (let [s (get-state request)
+        plays (state/get-all-plays s)
+        avg-durations (into {}
+                        (for [game (state/get-all-games s)
+                              :let [timed (filter :duration-minutes
+                                                  (filter #(= (:game-id %) (:id game)) plays))]
+                              :when (seq timed)]
+                          [(:id game) (Math/round (double (/ (reduce + (map :duration-minutes timed))
+                                                             (count timed))))]))  ]
     (response/response
-      (views/games-list (state/get-all-games s)))))
+      (views/games-list (state/get-all-games s) avg-durations))))
 
 (defn new-game-form [_request]
   (response/response
@@ -432,6 +440,7 @@
         params (:params request)
         game-id (:game-id params)
         player-results (parse-player-results params)
+        duration-minutes (parse-int (:duration-minutes params))
         errors (validate-play s game-id player-results)]
     (println "Create play params:" params)
     (println "Game ID:" game-id)
@@ -439,15 +448,17 @@
     (println "Errors:" errors)
     (if (seq errors)
       (response/response
-        (views/play-form {:game-id game-id :player-results player-results}
+        (views/play-form {:game-id game-id :player-results player-results
+                          :duration-minutes duration-minutes}
                         (state/get-all-games s)
                         (state/get-all-players s)
                         errors))
       (do
-        (state/add-play! s {:id (str (UUID/randomUUID))
-                           :game-id game-id
-                           :timestamp (now-timestamp)
-                           :player-results player-results})
+        (state/add-play! s (cond-> {:id (str (UUID/randomUUID))
+                                    :game-id game-id
+                                    :timestamp (now-timestamp)
+                                    :player-results player-results}
+                             duration-minutes (assoc :duration-minutes duration-minutes)))
         (response/redirect "/plays")))))
 
 (defn edit-play-form [request id]
@@ -465,18 +476,21 @@
         id (:id params)
         game-id (:game-id params)
         player-results (parse-player-results params)
+        duration-minutes (parse-int (:duration-minutes params))
         errors (validate-play s game-id player-results)]
     (if (seq errors)
       (response/response
         (views/play-form (assoc (state/get-play s id)
                                :game-id game-id
-                               :player-results player-results)
+                               :player-results player-results
+                               :duration-minutes duration-minutes)
                         (state/get-all-games s)
                         (state/get-all-players s)
                         errors))
       (do
         (state/update-play! s id {:game-id game-id
-                                 :player-results player-results})
+                                  :player-results player-results
+                                  :duration-minutes duration-minutes})
         (response/redirect "/plays")))))
 
 (defn delete-play [request id]

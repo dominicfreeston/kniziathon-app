@@ -26,7 +26,7 @@
      [:main {:class "container"}
       content]]))
 
-(defn games-list [games & [message]]
+(defn games-list [games avg-durations & [message]]
   (layout "Games"
     (when message [:p {:class "success"} message])
     [:h1 "Games"]
@@ -38,12 +38,15 @@
       [:tr
        [:th "Name"]
        [:th {:class "numeric"} "Weight"]
+       [:th {:class "numeric"} "Avg Duration"]
        [:th {:class "actions"} "Actions"]]]
      [:tbody
       (for [game (sort-by :name games)]
         [:tr
          [:td [:a {:href (str "/games/" (:id game) "/plays")} (:name game)]]
          [:td {:class "numeric"} (:weight game)]
+         [:td {:class "numeric"}
+          (when-let [d (get avg-durations (:id game))] (str d "m"))]
          [:td {:class "actions"}
           [:a {:href (str "/games/" (:id game) "/edit")} "Edit"]
           [:form {:method "post"
@@ -65,7 +68,7 @@
       (form/form-to [:post (if editing? (str "/games/" (:id game)) "/games")]
         [:label {:for "name"} "Game Name"]
         (form/text-field {:required true} "name" (:name game))
-        [:label {:for "weight"} "Weight (hours)"]
+        [:label {:for "weight"} "Weight"]
         (form/text-field {:required true :type "number" :step "1" :min "1"}
                         "weight" (:weight game))
         [:button {:type "submit"} (if editing? "Update Game" "Create Game")]))))
@@ -124,6 +127,7 @@
    [:th "Game"]
    [:th "Players"]
    [:th "Points"]
+   [:th {:class "numeric"} "Duration"]
    [:th {:class "actions"} "Actions"]])
 
 (defn play-row [play games-map players-map tie-mode]
@@ -146,6 +150,8 @@
             :let [tie-count (count (filter #(= (:rank %) rank) all-results))]]
         [:div
          (str (scoring/calculate-tied-play-score rank player-count (:weight game) tie-count tie-mode) " pts")])]
+     [:td {:class "numeric"}
+      (when-let [d (:duration-minutes play)] (str d "m"))]
      [:td {:class "actions"}
       [:a {:href (str "/plays/" (:id play) "/edit")} "Edit"]
       " "
@@ -308,6 +314,10 @@
          (for [g (sort-by :name games)]
            [:option {:value (:id g) :selected (= (:id g) (:game-id play))}
             (:name g)])]
+        [:label {:for "duration-minutes"} "Duration (minutes)"]
+        [:input {:type "number" :name "duration-minutes" :id "duration-minutes"
+                 :min "1" :placeholder "Optional"
+                 :value (:duration-minutes play)}]
         (player-results-fragment player-results players)
         [:button {:type "button"
                  :hx-post "/htmx/plays/rank-by-score"
@@ -400,6 +410,7 @@
      [:th {:class "numeric"} "Rank"]
      [:th {:class "numeric"} "Score"]
      [:th {:class "numeric"} "Points"]
+     [:th {:class "numeric"} "Duration"]
      [:th "Others"]]]
    [:tbody
     (for [play (:plays detail)]
@@ -413,6 +424,7 @@
          [:td {:class "numeric"} (:rank pr)]
          [:td {:class "numeric"} (or (:game-score pr) "—")]
          [:td {:class "numeric"} (str pts " pts")]
+         [:td {:class "numeric"} (when-let [d (:duration-minutes play)] (str d "m"))]
          [:td (str/join ", " (map #(let [p (get players-map (:player-id %))]
                                      (str (:name p) " (#" (:rank %) ")"))
                                   others))]]))]])
@@ -440,42 +452,51 @@
        (game-plays-table player detail players-map tie-mode)])))
 
 (defn game-detail [game plays players]
-  (layout (str (:name game) " - Plays")
-    [:h1 (:name game)]
-    [:p [:strong "Weight: "] (:weight game)]
-    [:a {:href "/games"} "← Back to Games"]
-    [:h2 "Plays"]
-    (if (empty? plays)
-      [:p "No plays recorded yet."]
-      [:table
-       [:thead
-        [:tr
-         [:th "Date"]
-         [:th "Players"]
-         [:th {:class "actions"} "Actions"]]]
-       [:tbody
-        (for [play (reverse (sort-by :timestamp plays))]
-          (let [sorted-results (sort-by :rank (:player-results play))
-                player-map (into {} (map (fn [p] [(:id p) p]) players))]
-            [:tr
-             [:td (:timestamp play)]
-             [:td
-              (for [pr sorted-results]
-                (let [player (get player-map (:player-id pr))]
-                  [:div
-                   (str (:rank pr) ". ")
-                   [:a {:href (str "/leaderboard/player/" (:player-id pr))} (:name player)]
-                   (when (:game-score pr) (str " (" (:game-score pr) ")"))]))]
-             [:td {:class "actions"}
-              [:a {:href (str "/plays/" (:id play) "/edit")} "Edit"]
-              " "
-              [:form {:method "post"
-                      :action (str "/plays/" (:id play) "/delete")
-                      :style "display: inline;"}
-               [:button {:type "submit"
-                         :class "delete-btn"
-                         :onclick "return confirm('Delete this play? This cannot be undone.')"}
-                "Delete"]]]]))]])))
+  (let [timed-plays (filter :duration-minutes plays)
+        avg-duration (when (seq timed-plays)
+                       (Math/round (double (/ (reduce + (map :duration-minutes timed-plays))
+                                              (count timed-plays)))))]
+    (layout (str (:name game) " - Plays")
+      [:h1 (:name game)]
+      [:p [:strong "Weight: "] (:weight game)]
+      (when avg-duration
+        [:p [:strong "Avg Duration: "] (str avg-duration " min")])
+      [:a {:href "/games"} "← Back to Games"]
+      [:h2 "Plays"]
+      (if (empty? plays)
+        [:p "No plays recorded yet."]
+        [:table
+         [:thead
+          [:tr
+           [:th "Date"]
+           [:th {:class "numeric"} "Duration"]
+           [:th "Players"]
+           [:th {:class "actions"} "Actions"]]]
+         [:tbody
+          (for [play (reverse (sort-by :timestamp plays))]
+            (let [sorted-results (sort-by :rank (:player-results play))
+                  player-map (into {} (map (fn [p] [(:id p) p]) players))]
+              [:tr
+               [:td (:timestamp play)]
+               [:td {:class "numeric"}
+                (when-let [d (:duration-minutes play)] (str d "m"))]
+               [:td
+                (for [pr sorted-results]
+                  (let [player (get player-map (:player-id pr))]
+                    [:div
+                     (str (:rank pr) ". ")
+                     [:a {:href (str "/leaderboard/player/" (:player-id pr))} (:name player)]
+                     (when (:game-score pr) (str " (" (:game-score pr) ")"))]))]
+               [:td {:class "actions"}
+                [:a {:href (str "/plays/" (:id play) "/edit")} "Edit"]
+                " "
+                [:form {:method "post"
+                        :action (str "/plays/" (:id play) "/delete")
+                        :style "display: inline;"}
+                 [:button {:type "submit"
+                           :class "delete-btn"
+                           :onclick "return confirm('Delete this play? This cannot be undone.')"}
+                  "Delete"]]]]))]]))))
 
 (defn split-player-form [player plays games-map players-map & [errors]]
   (layout (str "Split Player: " (:name player))
