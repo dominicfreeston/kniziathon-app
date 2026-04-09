@@ -52,6 +52,7 @@
   (GET "/leaderboard/player/:id" [id :as request] (handlers/player-detail request id))
   (POST "/settings/toggle-scoring-mode" request (handlers/toggle-scoring-mode request))
   (POST "/settings/tie-scoring-mode" request (handlers/set-tie-scoring-mode request))
+  (POST "/settings/event-title" request (handlers/set-event-title request))
 
   ;; Data Management
   (GET "/data" request (handlers/data-management request))

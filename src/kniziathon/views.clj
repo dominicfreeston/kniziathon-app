@@ -363,9 +363,13 @@
    :average "Average (round up)"
    :lower "Lower (bottom rank points)"})
 
-(defn leaderboard [leaderboard-data multi-play? tie-mode]
-  (layout "Leaderboard"
-    [:h1 "Kniziathon Leaderboard"]
+(defn leaderboard [leaderboard-data multi-play? tie-mode event-title]
+  (layout (or event-title "Leaderboard")
+    (if event-title
+      [:div
+       [:h1 event-title]
+       [:h2 {:style "color: var(--text-muted); margin-top: 0;"} "Kniziathon Leaderboard"]]
+      [:h1 "Kniziathon Leaderboard"])
     [:div {:class "scoring-mode-controls"
            :style "display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;"}
      [:span {:style "color: #666;"}
@@ -637,10 +641,16 @@
          " "
          [:a {:href "/games" :role "button" :class "secondary"} "Cancel"]])]))
 
-(defn data-management [& [message]]
+(defn data-management [event-title & [message]]
   (layout "Data Management"
     (when message [:p {:class "success"} message])
     [:h1 "Data Management"]
+    [:h2 "Event Title"]
+    [:p "Set a title displayed on the leaderboard page."]
+    [:form {:method "post" :action "/settings/event-title"}
+     [:input {:type "text" :name "event-title" :value (or event-title "")
+              :placeholder "e.g. Kniziathon 2026" :style "max-width: 400px;"}]
+     [:button {:type "submit"} "Save Title"]]
     [:h2 "Export Data"]
     [:p "Download all data as a JSON file."]
     (form/form-to [:post "/data/export"]

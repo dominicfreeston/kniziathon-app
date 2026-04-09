@@ -511,7 +511,8 @@
     (response/response
       (views/leaderboard (scoring/leaderboard-data s)
                          (state/get-setting s :multi-play-scoring)
-                         (or (state/get-setting s :tie-scoring-mode) :full)))))
+                         (or (state/get-setting s :tie-scoring-mode) :full)
+                         (state/get-setting s :event-title)))))
 
 (defn toggle-scoring-mode [request]
   (state/toggle-setting! (get-state request) :multi-play-scoring)
@@ -627,9 +628,17 @@
     (htmx-fragment (views/player-results-fragment new-results (state/get-all-players s)))))
 
 ;; Data management handlers
-(defn data-management [_request]
-  (response/response
-    (views/data-management)))
+(defn data-management [request]
+  (let [s (get-state request)]
+    (response/response
+      (views/data-management (state/get-setting s :event-title)))))
+
+(defn set-event-title [request]
+  (let [s (get-state request)
+        title (get-in request [:params :event-title])
+        title (when-not (clojure.string/blank? title) (clojure.string/trim title))]
+    (state/set-setting! s :event-title title)
+    (response/redirect "/data")))
 
 (defn export-data [request]
   (let [s (get-state request)
