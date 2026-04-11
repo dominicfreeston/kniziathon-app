@@ -86,6 +86,7 @@
   "Return sorted list of players with scores and competition ranks (ties share a rank)"
   [app-state]
   (let [sorted (->> (state/get-all-players app-state)
+                    (remove :hidden-from-leaderboard)
                     (map (fn [player]
                            {:player-id (:id player)
                             :name (:name player)

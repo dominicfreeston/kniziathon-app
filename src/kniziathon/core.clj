@@ -35,6 +35,7 @@
   (POST "/players" request (handlers/create-player request))
   (GET "/players/:id/split" [id :as request] (handlers/split-player-form-get request id))
   (POST "/players/:id/split" [id :as request] (handlers/split-player request id))
+  (POST "/players/:id/toggle-leaderboard" [id :as request] (handlers/toggle-player-leaderboard-visibility request id))
   (GET "/players/:id/edit" [id :as request] (handlers/edit-player-form request id))
   (POST "/players/:id" [id :as request] (handlers/update-player (assoc-in request [:params :id] id)))
   (POST "/players/:id/delete" [id :as request] (handlers/delete-player request id))

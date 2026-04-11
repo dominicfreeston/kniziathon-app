@@ -102,6 +102,14 @@
               " "
               [:a {:href (str "/players/" (:id player) "/split")} "Split"]
               [:form {:method "post"
+                      :action (str "/players/" (:id player) "/toggle-leaderboard")
+                      :style "display: inline;"}
+               [:input {:type "hidden" :name "redirect" :value "/players"}]
+               [:button {:type "submit"
+                        :class "secondary"
+                        :title (if (:hidden-from-leaderboard player) "Show on leaderboard" "Hide from leaderboard")}
+                (if (:hidden-from-leaderboard player) "Show" "Hide")]]
+              [:form {:method "post"
                       :action (str "/players/" (:id player) "/delete")
                       :style "display: inline;"}
                [:button {:type "submit"
@@ -120,7 +128,14 @@
       (form/form-to [:post (if editing? (str "/players/" (:id player)) "/players")]
         [:label {:for "name"} "Player Name"]
         (form/text-field {:required true} "name" (:name player))
-        [:button {:type "submit"} (if editing? "Update Player" "Create Player")]))))
+        [:button {:type "submit"} (if editing? "Update Player" "Create Player")])
+      (when editing?
+        [:form {:method "post"
+                :action (str "/players/" (:id player) "/toggle-leaderboard")
+                :style "margin-top: 1rem;"}
+         [:input {:type "hidden" :name "redirect" :value (str "/players/" (:id player) "/edit")}]
+         [:button {:type "submit" :class "secondary"}
+          (if (:hidden-from-leaderboard player) "Show on Leaderboard" "Hide from Leaderboard")]]))))
 
 (defn play-header []
   [:tr
@@ -433,26 +448,35 @@
                                   others))]]))]])
 
 (defn player-detail [player details players-map multi-play? total-score total-plays tie-mode]
-  (layout (str (:name player) " - Details")
-    [:h1 (:name player)]
-    [:p [:strong "Total Score: "] total-score]
-    [:p [:strong "Total Plays: "] total-plays]
-    [:a {:href "/leaderboard"} "← Back to Leaderboard"]
-    [:h2 "Game Breakdown"]
-    (for [detail details]
-      [:details {:style "border: 1px solid #ccc; border-radius: 4px; margin-bottom: 0.5rem; padding: 0.5rem 0.75rem;"}
-       [:summary {:style "cursor: pointer; display: flex; gap: 2rem; align-items: baseline;"}
-        [:span {:style "flex: 2; font-weight: bold;"}
-         [:a {:href (str "/games/" (:game-id detail) "/plays")
-              :onclick "event.stopPropagation()"}
-          (:game-name detail)]]
-        [:span (str "Weight: " (:weight detail))]
-        [:span (if multi-play?
-                 (str "Total Points: " (:total-score detail) " pts")
-                 (str "Best Points: " (:best-score detail) " pts"))]
-        [:span (str "Best Rank: " (:rank detail))]
-        [:span (str (:num-plays detail) " play" (when (not= 1 (:num-plays detail)) "s"))]]
-       (game-plays-table player detail players-map tie-mode)])))
+  (let [hidden? (:hidden-from-leaderboard player)]
+    (layout (str (:name player) " - Details")
+      [:h1 (:name player)]
+      [:p [:strong "Total Score: "] total-score]
+      [:p [:strong "Total Plays: "] total-plays]
+      [:div {:style "display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;"}
+       [:a {:href "/leaderboard"} "← Back to Leaderboard"]
+       [:form {:method "post"
+               :action (str "/players/" (:id player) "/toggle-leaderboard")
+               :style "margin: 0;"}
+        [:button {:type "submit"
+                  :class (if hidden? "secondary" "")
+                  :style "padding: 0.25rem 0.75rem; font-size: 0.85rem;"}
+         (if hidden? "Show on Leaderboard" "Hide from Leaderboard")]]]
+      [:h2 "Game Breakdown"]
+      (for [detail details]
+        [:details {:style "border: 1px solid #ccc; border-radius: 4px; margin-bottom: 0.5rem; padding: 0.5rem 0.75rem;"}
+         [:summary {:style "cursor: pointer; display: flex; gap: 2rem; align-items: baseline;"}
+          [:span {:style "flex: 2; font-weight: bold;"}
+           [:a {:href (str "/games/" (:game-id detail) "/plays")
+                :onclick "event.stopPropagation()"}
+            (:game-name detail)]]
+          [:span (str "Weight: " (:weight detail))]
+          [:span (if multi-play?
+                   (str "Total Points: " (:total-score detail) " pts")
+                   (str "Best Points: " (:best-score detail) " pts"))]
+          [:span (str "Best Rank: " (:rank detail))]
+          [:span (str (:num-plays detail) " play" (when (not= 1 (:num-plays detail)) "s"))]]
+         (game-plays-table player detail players-map tie-mode)]))))
 
 (defn game-detail [game plays players]
   (let [timed-plays (filter :duration-minutes plays)

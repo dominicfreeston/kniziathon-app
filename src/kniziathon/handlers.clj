@@ -208,6 +208,15 @@
   (state/delete-player! (get-state request) id)
   (response/redirect "/players"))
 
+(defn toggle-player-leaderboard-visibility [request id]
+  (let [s (get-state request)
+        player (state/get-player s id)
+        hidden? (not (:hidden-from-leaderboard player))
+        redirect-to (or (get-in request [:params :redirect])
+                        (str "/leaderboard/player/" id))]
+    (state/update-player! s id {:hidden-from-leaderboard hidden?})
+    (response/redirect redirect-to)))
+
 ;; Player merge handlers
 (defn merge-players-form-get [request]
   (let [s (get-state request)]
