@@ -84,9 +84,12 @@
   (response/redirect "/games"))
 
 ;; Game merge handlers
+(defn- game-play-counts [s]
+  (frequencies (map :game-id (state/get-all-plays s))))
+
 (defn merge-games-form-get [request]
   (let [s (get-state request)]
-    (response/response (views/merge-games-form (state/get-all-games s) nil nil nil))))
+    (response/response (views/merge-games-form (state/get-all-games s) (game-play-counts s) nil nil nil))))
 
 (defn merge-games [request]
   (let [s (get-state request)
@@ -94,7 +97,8 @@
         source-id (:source-game-id params)
         target-id (:target-game-id params)
         confirm (:confirm params)
-        games (state/get-all-games s)]
+        games (state/get-all-games s)
+        play-counts (game-play-counts s)]
     (println "Merge params:" params)
     (println "Source:" source-id "Target:" target-id "Confirm:" confirm)
 
@@ -108,7 +112,7 @@
                      (and target-id (not (state/get-game s target-id))) (conj "Target game not found"))]
         (if (seq errors)
           (response/response
-            (views/merge-games-form games nil nil nil errors))
+            (views/merge-games-form games play-counts nil nil nil errors))
           (do
             ;; Perform atomic merge
             (swap! s
@@ -133,9 +137,8 @@
       (if (and source-id target-id)
         (let [source-game (state/get-game s source-id)
               target-game (state/get-game s target-id)
-              all-plays (state/get-all-plays s)
-              source-plays (count (filter #(= (:game-id %) source-id) all-plays))
-              target-plays (count (filter #(= (:game-id %) target-id) all-plays))
+              source-plays (get play-counts source-id 0)
+              target-plays (get play-counts target-id 0)
               weight-diff (when (and source-game target-game)
                            (Math/abs (- (:weight source-game) (:weight target-game))))
               weight-warning (and weight-diff (> weight-diff (* 0.1 (:weight target-game))))
@@ -144,10 +147,11 @@
                        (not target-game) (conj "Target game not found")
                        (= source-id target-id) (conj "Cannot merge a game into itself"))]
           (if (seq errors)
-            (response/response (views/merge-games-form games source-game target-game nil errors))
+            (response/response (views/merge-games-form games play-counts source-game target-game nil errors))
             (response/response
               (views/merge-games-form
                 games
+                play-counts
                 source-game
                 target-game
                 {:source-name (:name source-game)
@@ -158,7 +162,7 @@
                  :target-plays target-plays
                  :weight-warning weight-warning}))))
         ;; Missing source or target, show form again
-        (response/response (views/merge-games-form games nil nil nil))))))
+        (response/response (views/merge-games-form games play-counts nil nil nil))))))
 
 ;; Players handlers
 (defn players-list [request]

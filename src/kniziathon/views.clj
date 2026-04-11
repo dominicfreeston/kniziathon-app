@@ -367,8 +367,7 @@
   (layout (or event-title "Leaderboard")
     (if event-title
       [:div
-       [:h1 event-title]
-       [:h2 {:style "color: var(--text-muted); margin-top: 0;"} "Kniziathon Leaderboard"]]
+       [:h1 event-title]]
       [:h1 "Kniziathon Leaderboard"])
     [:div {:class "scoring-mode-controls"
            :style "display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;"}
@@ -594,26 +593,29 @@
            " "
            [:a {:href "/players" :role "button" :class "secondary"} "Cancel"]])])))
 
-(defn merge-games-form [games source-game target-game preview-data & [errors]]
-  (layout "Merge Games"
-    [:h1 "Merge Games"]
-    [:p "Combine two duplicate games into one. All plays from the source game will be reassigned to the target game."]
-    (when errors
-      [:div {:class "error"}
-       [:ul (for [err errors] [:li err])]])
-    [:form {:method "post" :action "/games/merge"}
-      [:label {:for "source-game-id"} "Source Game (will be deleted)"]
-      [:select {:name "source-game-id" :id "source-game-id" :required true}
-       [:option {:value ""} "-- Select Game to Remove --"]
-       (for [g (sort-by :name games)]
-         [:option {:value (:id g) :selected (= (:id g) (:id source-game))}
-          (:name g)])]
-      [:label {:for "target-game-id"} "Target Game (will be kept)"]
-      [:select {:name "target-game-id" :id "target-game-id" :required true}
-       [:option {:value ""} "-- Select Game to Keep --"]
-       (for [g (sort-by :name games)]
-         [:option {:value (:id g) :selected (= (:id g) (:id target-game))}
-          (:name g)])]
+(defn merge-games-form [games game-play-counts source-game target-game preview-data & [errors]]
+  (let [game-label (fn [g]
+                     (str (:name g) " (weight: " (:weight g)
+                          ", " (get game-play-counts (:id g) 0) " plays)"))]
+    (layout "Merge Games"
+      [:h1 "Merge Games"]
+      [:p "Combine two duplicate games into one. All plays from the source game will be reassigned to the target game."]
+      (when errors
+        [:div {:class "error"}
+         [:ul (for [err errors] [:li err])]])
+      [:form {:method "post" :action "/games/merge"}
+        [:label {:for "source-game-id"} "Source Game (will be deleted)"]
+        [:select {:name "source-game-id" :id "source-game-id" :required true}
+         [:option {:value ""} "-- Select Game to Remove --"]
+         (for [g (sort-by :name games)]
+           [:option {:value (:id g) :selected (= (:id g) (:id source-game))}
+            (game-label g)])]
+        [:label {:for "target-game-id"} "Target Game (will be kept)"]
+        [:select {:name "target-game-id" :id "target-game-id" :required true}
+         [:option {:value ""} "-- Select Game to Keep --"]
+         (for [g (sort-by :name games)]
+           [:option {:value (:id g) :selected (= (:id g) (:id target-game))}
+            (game-label g)])]
       (if preview-data
         [:div
          [:h2 "Preview Merge"]
@@ -639,7 +641,7 @@
         [:div
          [:button {:type "submit"} "Preview Merge"]
          " "
-         [:a {:href "/games" :role "button" :class "secondary"} "Cancel"]])]))
+         [:a {:href "/games" :role "button" :class "secondary"} "Cancel"]])])))
 
 (defn data-management [event-title & [message]]
   (layout "Data Management"
